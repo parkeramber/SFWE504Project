@@ -13,3 +13,6 @@ frontend/dist/
 # macOS
 .DS_Store
 
+venv/
+.env/
+.venv/
