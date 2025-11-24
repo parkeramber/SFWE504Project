@@ -1,7 +1,14 @@
 # Python
 backend/venv/
-backend/__pycache__/
-backend/**/*.pyc
+venv/
+.venv/
+**/__pycache__/
+*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+.coverage
+htmlcov/
 
 # SQLite DB file if you create one
 backend/uasams.db
@@ -13,6 +20,14 @@ frontend/dist/
 # macOS
 .DS_Store
 
-venv/
+# Windows
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Env files
+.env
+.env.local
 .env/
-.venv/
