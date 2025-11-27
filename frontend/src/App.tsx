@@ -4,6 +4,7 @@ import Dashboard from "./routes/Dashboard";
 import ProfilePage from "./routes/Profile";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Navbar from "./components/Navbar";
+import AdminReports from "./routes/AdminReportsGUI";
 import "./App.css";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/AdminReports" element={<AdminReports></AdminReports>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
