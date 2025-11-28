@@ -5,6 +5,7 @@ import ProfilePage from "./routes/Profile";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import AdminReports from "./routes/AdminReportsGUI";
+import ApplicationCreationGUI from "./routes/ScholarshipCreateEditGUI";
 import "./App.css";
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
           }
         />
         <Route path="/AdminReports" element={<AdminReports></AdminReports>} />
+        <Route path="/ApplicationCreationGUI" element={<ApplicationCreationGUI></ApplicationCreationGUI>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
