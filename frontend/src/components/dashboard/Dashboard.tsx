@@ -22,7 +22,7 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    const load = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -46,7 +46,7 @@ export default function Dashboard() {
           setLoading(false);
         }
       }
-    }
+    };
 
     void load();
 
@@ -72,7 +72,8 @@ export default function Dashboard() {
   }
 
   if (!user) {
-    return null; // fetchMe will have logged out if token was bad
+    // fetchMe will have logged out if token was bad
+    return null;
   }
 
   return (
@@ -113,37 +114,76 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* ADMIN VIEW */}
+      {/* ENGR ADMIN VIEW */}
       {user.role === "engr_admin" && (
-        <section className="dashboard-section">
-          <h3 className="dashboard-section-title">Admin Panel</h3>
-          <p className="dashboard-text">
-            As an ENGR Admin, you can manage scholarships, users, and reports.
-          </p>
+        <section className="dashboard-section dashboard-section--admin">
+          <div className="dashboard-card dashboard-card--admin">
+            <h3 className="dashboard-section-title">Admin Panel</h3>
+            <p className="dashboard-text">
+              As an ENGR Admin, you can manage scholarships, users, and reports.
+            </p>
 
-          <div className="dashboard-admin-actions">
-            <Link className="dashboard-button" to="/admin/scholarships">
-              Application Edit/Create/Delete
-            </Link>
-            <Link className="dashboard-button" to="/admin/reports">
-              Reports
-            </Link>
+            <div className="dashboard-admin-actions">
+              {/* future pages – disabled for now */}
+              <button
+                className="dashboard-chip dashboard-chip--disabled"
+                type="button"
+                disabled
+              >
+                User Edit / Create / Delete
+              </button>
+
+              {/* matches /admin/scholarships route */}
+              <Link className="dashboard-chip" to="/admin/scholarships">
+                Application Edit / Create / Delete
+              </Link>
+
+              {/* future page – disabled */}
+              <button
+                className="dashboard-chip dashboard-chip--disabled"
+                type="button"
+                disabled
+              >
+                Disbursement Controls
+              </button>
+
+              {/* matches /admin/reports route */}
+              <Link className="dashboard-chip" to="/admin/reports">
+                Reports &amp; Analytics
+              </Link>
+
+              {/* future pages – disabled */}
+              <button
+                className="dashboard-chip dashboard-chip--disabled"
+                type="button"
+                disabled
+              >
+                User Password Management
+              </button>
+              <button
+                className="dashboard-chip dashboard-chip--secondary dashboard-chip--disabled"
+                type="button"
+                disabled
+              >
+                Help &amp; Documentation
+              </button>
+            </div>
+
+            <h4 className="dashboard-section-subtitle">All Scholarships</h4>
+            {scholarships.length === 0 ? (
+              <p>No scholarships created yet.</p>
+            ) : (
+              <ul className="dashboard-admin-list">
+                {scholarships.map((sch) => (
+                  <li key={sch.id} className="dashboard-admin-item">
+                    <span>{sch.name}</span>
+                    <span>Deadline: {formatDeadline(sch.deadline)}</span>
+                    <span>${sch.amount}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-
-          <h4 className="dashboard-section-subtitle">All Scholarships</h4>
-          {scholarships.length === 0 ? (
-            <p>No scholarships created yet.</p>
-          ) : (
-            <ul className="dashboard-admin-list">
-              {scholarships.map((sch) => (
-                <li key={sch.id} className="dashboard-admin-item">
-                  <span>{sch.name}</span>
-                  <span>Deadline: {formatDeadline(sch.deadline)}</span>
-                  <span>${sch.amount}</span>
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
       )}
 

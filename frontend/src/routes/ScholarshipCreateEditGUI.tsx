@@ -1,23 +1,17 @@
-// FRONTEND: src/routes/ScholarshipCreateEditGUI.tsx
-
-import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-
-import { fetchMe } from "../auth/api";
-import { loadTokens, clearTokens } from "../auth/session";
-import type { User } from "../auth/types";
+// frontend/src/routes/ScholarshipCreateEditGUI.tsx
+import { useState } from "react";
+import "./ScholarshipCreateEditGUI.css";
 import { createScholarship } from "../scholarships/api";
 
 type FormState = {
   name: string;
   description: string;
-  amount: string;      // keep as string in the form, convert to number on submit
-  deadline: string;    // "YYYY-MM-DD"
+  amount: string;
+  deadline: string;
   requirements: string;
 };
 
 export default function ScholarshipCreateEditGUI() {
-  const [user, setUser] = useState<User | null>(null);
   const [form, setForm] = useState<FormState>({
     name: "",
     description: "",
@@ -25,185 +19,154 @@ export default function ScholarshipCreateEditGUI() {
     deadline: "",
     requirements: "",
   });
+
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function hydrate() {
-      try {
-        const tokens = loadTokens();
-        if (!tokens) {
-          setError("No active session. Please log in.");
-          return;
-        }
-
-        // fetchMe will internally handle expired tokens and logout (we coded that earlier)
-        const me = await fetchMe();
-        if (!me || cancelled) return;
-
-        setUser(me);
-      } catch (err) {
-        console.error("Failed to load current user", err);
-        if (!cancelled) {
-          setError("Session expired, please log in again.");
-          clearTokens();
-          navigate("/auth", { replace: true });
-        }
-      }
-    }
-
-    void hydrate();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  }
 
-  const handleSubmit = async (e: FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
 
-    if (!user) {
-      setError("No user loaded.");
+    // very light validation
+    if (!form.name.trim()) {
+      setError("Please enter a scholarship name.");
       return;
     }
-
-    if (user.role !== "engr_admin") {
-      setError("You do not have permission to create scholarships.");
-      return;
-    }
-
-    const amountNumber = Number(form.amount);
-    if (Number.isNaN(amountNumber) || amountNumber <= 0) {
-      setError("Amount must be a positive number.");
+    if (!form.amount || Number.isNaN(Number(form.amount))) {
+      setError("Please enter a valid amount.");
       return;
     }
 
     try {
-      setSaving(true);
+      setSubmitting(true);
 
       await createScholarship({
         name: form.name.trim(),
-        description: form.description.trim() || null,
-        amount: amountNumber,
-        deadline: form.deadline,          // e.g. "2026-01-31"
-        requirements: form.requirements.trim() || null,
+        description: form.description.trim(),
+        amount: Number(form.amount),
+        deadline: form.deadline, // from <input type="date">
+        requirements: form.requirements.trim(),
       });
 
-      // After successful creation, go back to dashboard
-      navigate("/dashboard", { replace: true });
+      setSuccess("Scholarship created successfully.");
+      setForm({
+        name: "",
+        description: "",
+        amount: "",
+        deadline: "",
+        requirements: "",
+      });
     } catch (err: any) {
-      console.error("Failed to create scholarship", err);
-      setError(
-        err?.response?.data?.detail ??
-          "Failed to create scholarship. Please try again."
-      );
+      console.error("Create scholarship failed", err);
+      const detail =
+        err?.response?.data?.detail ||
+        "Unable to create scholarship. Please try again.";
+      setError(detail);
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
-  };
-
-  // Loading states
-  if (!user && !error) {
-    return (
-      <div className="dashboard-page">
-        <div className="dashboard-card">
-          <p>Loading user…</p>
-        </div>
-      </div>
-    );
   }
 
-  // If we have a user but they’re not an admin
-  if (user && user.role !== "engr_admin") {
-    return (
-      <div className="dashboard-page">
-        <div className="dashboard-card">
-          <h2>Access Denied</h2>
-          <p>You do not have permission to manage scholarships.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Happy path: admin + form
   return (
-    <div className="dashboard-page">
-      <div className="dashboard-card">
-        <h2>Create Scholarship</h2>
-        <p className="lead-text">
-          Fill out the form below to create a new scholarship.
-        </p>
+    <div className="scholarship-page">
+      <div className="scholarship-card">
+        <header className="scholarship-header">
+          <h1 className="scholarship-title">Create Scholarship</h1>
+          <p className="scholarship-subtitle">
+            Fill out the form below to create a new scholarship.
+          </p>
+        </header>
 
-        {error && <p className="dashboard-error">{error}</p>}
+        {error && <p className="scholarship-alert scholarship-alert--error">{error}</p>}
+        {success && (
+          <p className="scholarship-alert scholarship-alert--success">{success}</p>
+        )}
 
-        <form className="form" onSubmit={handleSubmit}>
-          <label className="form-field">
-            <span>Name</span>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-          </label>
+        <form className="scholarship-form" onSubmit={handleSubmit}>
+          <div className="scholarship-form-grid">
+            <div className="scholarship-field">
+              <label htmlFor="name">Name</label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="e.g., SHPE – EduAid Scholarship"
+                required
+              />
+            </div>
 
-          <label className="form-field">
-            <span>Description</span>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={3}
-            />
-          </label>
+            <div className="scholarship-field">
+              <label htmlFor="amount">Amount (USD)</label>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                min="0"
+                step="100"
+                value={form.amount}
+                onChange={handleChange}
+                placeholder="e.g., 2500"
+                required
+              />
+            </div>
 
-          <label className="form-field">
-            <span>Amount (USD)</span>
-            <input
-              type="number"
-              name="amount"
-              value={form.amount}
-              onChange={handleChange}
-              required
-              min={1}
-            />
-          </label>
+            <div className="scholarship-field scholarship-field--full">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                rows={3}
+                value={form.description}
+                onChange={handleChange}
+                placeholder="Short description of the scholarship purpose and who it is for."
+              />
+            </div>
 
-          <label className="form-field">
-            <span>Deadline</span>
-            <input
-              type="date"
-              name="deadline"
-              value={form.deadline}
-              onChange={handleChange}
-              required
-            />
-          </label>
+            <div className="scholarship-field">
+              <label htmlFor="deadline">Deadline</label>
+              <input
+                id="deadline"
+                name="deadline"
+                type="date"
+                value={form.deadline}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <label className="form-field">
-            <span>Requirements</span>
-            <textarea
-              name="requirements"
-              value={form.requirements}
-              onChange={handleChange}
-              rows={3}
-            />
-          </label>
+            <div className="scholarship-field scholarship-field--full">
+              <label htmlFor="requirements">Requirements</label>
+              <textarea
+                id="requirements"
+                name="requirements"
+                rows={4}
+                value={form.requirements}
+                onChange={handleChange}
+                placeholder="GPA minimum, major, class standing, essays, financial need, etc."
+              />
+            </div>
+          </div>
 
-          <button className="dashboard-button" type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Create Scholarship"}
-          </button>
+          <div className="scholarship-actions">
+            <button
+              type="submit"
+              className="scholarship-submit"
+              disabled={submitting}
+            >
+              {submitting ? "Creating…" : "Create Scholarship"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
