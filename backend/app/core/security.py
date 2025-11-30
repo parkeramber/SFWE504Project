@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
+
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -34,16 +35,35 @@ def _build_expiry(delta: timedelta) -> datetime:
     return datetime.now(timezone.utc) + delta
 
 
-def create_access_token(subject: str | int, role: str, expires_minutes: Optional[int] = None) -> str:
+def create_access_token(
+    subject: Union[str, int],
+    role: str,
+    expires_minutes: Optional[int] = None,
+) -> str:
     expire = _build_expiry(timedelta(minutes=expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode: Dict[str, Any] = {"sub": str(subject), "role": role, "token_type": "access", "exp": expire}
+    to_encode: Dict[str, Any] = {
+        "sub": str(subject),
+        "role": role,
+        "token_type": "access",
+        "exp": expire,
+    }
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_refresh_token(subject: str | int, role: str, expires_days: Optional[int] = None) -> str:
+def create_refresh_token(
+    subject: Union[str, int],
+    role: str,
+    expires_days: Optional[int] = None,
+) -> str:
     expire = _build_expiry(timedelta(days=expires_days or REFRESH_TOKEN_EXPIRE_DAYS))
-    to_encode: Dict[str, Any] = {"sub": str(subject), "role": role, "token_type": "refresh", "exp": expire}
+    to_encode: Dict[str, Any] = {
+        "sub": str(subject),
+        "role": role,
+        "token_type": "refresh",
+        "exp": expire,
+    }
     return jwt.encode(to_encode, JWT_REFRESH_SECRET_KEY, algorithm=ALGORITHM)
+
 
 
 def decode_token(token: str, refresh: bool = False) -> Dict[str, Any]:

@@ -1,6 +1,7 @@
+// frontend/src/App.tsx
 import { Navigate, Route, Routes } from "react-router-dom";
 import AuthPage from "./auth/AuthPage";
-import Dashboard from "./routes/Dashboard";
+import Dashboard from "./components/dashboard/Dashboard";
 import ProfilePage from "./routes/Profile";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Navbar from "./components/Navbar";
@@ -15,6 +16,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<AuthPage defaultMode="login" />} />
         <Route path="/register" element={<AuthPage defaultMode="register" />} />
+
         <Route
           path="/dashboard"
           element={
@@ -23,6 +25,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/myprofile"
           element={
@@ -31,8 +34,26 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/AdminReports" element={<AdminReports></AdminReports>} />
-        <Route path="/ApplicationCreationGUI" element={<ApplicationCreationGUI></ApplicationCreationGUI>} />
+
+        {/* Admin-only pages (the components themselves can check role) */}
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute>
+              <AdminReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/scholarships"
+          element={
+            <ProtectedRoute>
+              <ApplicationCreationGUI />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* default routes */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
