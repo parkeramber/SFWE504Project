@@ -6,15 +6,22 @@ export type Scholarship = {
   name: string;
   description: string;
   amount: number;
-  deadline: string;      // ISO string from backend
+  deadline: string;
   requirements: string;
 };
+
+export async function searchScholarships(keyword: string): Promise<Scholarship[]> {
+  const res = await api.get<Scholarship[]>("/scholarships/search", {
+    params: { keyword },
+  });
+  return res.data;
+}
 
 export type ScholarshipInput = {
   name: string;
   description: string;
   amount: number;
-  deadline: string;      // "YYYY-MM-DD" for <input type="date" />
+  deadline: string;
   requirements: string;
 };
 
