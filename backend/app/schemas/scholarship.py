@@ -1,27 +1,39 @@
 # app/schemas/scholarship.py
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class ScholarshipBase(BaseModel):
-    name: str = Field(..., max_length=200)
+    name: str
     description: Optional[str] = None
-    requirements: Optional[str] = None
-    amount: int = Field(..., ge=0)
+    amount: int  # change to float/Decimal if your DB uses that
     deadline: date
+    requirements: Optional[str] = None
 
 
 class ScholarshipCreate(ScholarshipBase):
-    """Used when creating a scholarship."""
+    """Schema for creating a scholarship."""
     pass
 
 
+class ScholarshipUpdate(BaseModel):
+    """
+    Schema for updating a scholarship.
+    All fields are optional to allow partial updates.
+    """
+    name: Optional[str] = None
+    description: Optional[str] = None
+    amount: Optional[int] = None
+    deadline: Optional[date] = None
+    requirements: Optional[str] = None
+
+
 class ScholarshipRead(ScholarshipBase):
+    """Schema returned to the frontend."""
     id: int
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
-        from_attributes = True  # tells Pydantic to read from SQLAlchemy model
+        # Pydantic v2 version of orm_mode = True
+        from_attributes = True

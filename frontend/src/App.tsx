@@ -1,7 +1,6 @@
-// frontend/src/App.tsx
 import { Navigate, Route, Routes } from "react-router-dom";
 import AuthPage from "./auth/AuthPage";
-import Dashboard from "./components/dashboard/Dashboard";
+import Dashboard from "./components/dashboard/Dashboard";   // ⬅ this one
 import ProfilePage from "./routes/Profile";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Navbar from "./components/Navbar";
@@ -35,7 +34,7 @@ export default function App() {
           }
         />
 
-        {/* Admin-only pages (the components themselves can check role) */}
+        {/* Admin-only pages */}
         <Route
           path="/admin/reports"
           element={
@@ -53,7 +52,6 @@ export default function App() {
           }
         />
 
-        {/* default routes */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

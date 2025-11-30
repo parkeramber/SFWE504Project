@@ -1,22 +1,21 @@
-// FRONTEND: src/scholarships/api.ts
+// frontend/src/scholarships/api.ts
 import api from "../api/client";
-import { loadTokens } from "../auth/session";
 
 export type Scholarship = {
   id: number;
   name: string;
-  description: string | null;
+  description: string;
   amount: number;
-  deadline: string;       // ISO date from backend
-  requirements: string | null;
+  deadline: string;      // ISO string from backend
+  requirements: string;
 };
 
-export type ScholarshipCreateInput = {
+export type ScholarshipInput = {
   name: string;
-  description: string | null;
+  description: string;
   amount: number;
-  deadline: string;       // "YYYY-MM-DD"
-  requirements: string | null;
+  deadline: string;      // "YYYY-MM-DD" for <input type="date" />
+  requirements: string;
 };
 
 export async function listScholarships(): Promise<Scholarship[]> {
@@ -24,13 +23,21 @@ export async function listScholarships(): Promise<Scholarship[]> {
   return res.data;
 }
 
-export async function createScholarship(payload: ScholarshipCreateInput): Promise<Scholarship> {
-  const tokens = loadTokens();
-  // even though backend is currently “open”, we’ll still send auth
-  const res = await api.post<Scholarship>("/scholarships/", payload, {
-    headers: tokens
-      ? { Authorization: `Bearer ${tokens.accessToken}` }
-      : undefined,
-  });
+export async function createScholarship(
+  payload: ScholarshipInput,
+): Promise<Scholarship> {
+  const res = await api.post<Scholarship>("/scholarships/", payload);
   return res.data;
+}
+
+export async function updateScholarship(
+  id: number,
+  payload: ScholarshipInput,
+): Promise<Scholarship> {
+  const res = await api.put<Scholarship>(`/scholarships/${id}`, payload);
+  return res.data;
+}
+
+export async function deleteScholarship(id: number): Promise<void> {
+  await api.delete(`/scholarships/${id}`);
 }

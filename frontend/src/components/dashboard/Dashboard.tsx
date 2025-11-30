@@ -57,16 +57,20 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="dashboard">
-        <p>Loading dashboard…</p>
+      <div className="dashboard-page">
+        <div className="dashboard-card">
+          <p>Loading dashboard…</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="dashboard">
-        <p className="dashboard-error">{error}</p>
+      <div className="dashboard-page">
+        <div className="dashboard-card">
+          <p className="dashboard-error">{error}</p>
+        </div>
       </div>
     );
   }
@@ -77,54 +81,54 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h2 className="dashboard-title">
-          Welcome, {user.first_name} {user.last_name}
-        </h2>
-        <p className="dashboard-subtitle">
-          Role: <strong>{user.role}</strong>
-        </p>
-      </header>
+    <div className="dashboard-page">
+      <div className="dashboard-card">
+        <header className="dashboard-header">
+          <h2 className="dashboard-title">
+            Welcome, {user.first_name} {user.last_name}
+          </h2>
+          <p className="dashboard-subtitle">
+            Role: <strong>{user.role}</strong>
+          </p>
+        </header>
 
-      {/* APPLICANT VIEW */}
-      {user.role === "applicant" && (
-        <section className="dashboard-section">
-          <h3 className="dashboard-section-title">Available Scholarships</h3>
+        {/* APPLICANT VIEW */}
+        {user.role === "applicant" && (
+          <section className="dashboard-section">
+            <h3 className="dashboard-section-title">Available Scholarships</h3>
 
-          {scholarships.length === 0 ? (
-            <p>No scholarships available yet.</p>
-          ) : (
-            <div className="dashboard-list">
-              {scholarships.map((sch) => (
-                <div key={sch.id} className="dashboard-card">
-                  <h3>{sch.name}</h3>
-                  <p>{sch.description}</p>
-                  <div className="dashboard-meta">
-                    <span>Amount: ${sch.amount}</span>
-                    <span>Deadline: {formatDeadline(sch.deadline)}</span>
+            {scholarships.length === 0 ? (
+              <p>No scholarships available yet.</p>
+            ) : (
+              <div className="dashboard-list">
+                {scholarships.map((sch) => (
+                  <div key={sch.id} className="dashboard-card-inner">
+                    <h3>{sch.name}</h3>
+                    <p>{sch.description}</p>
+                    <div className="dashboard-meta">
+                      <span>Amount: ${sch.amount}</span>
+                      <span>Deadline: {formatDeadline(sch.deadline)}</span>
+                    </div>
+                    <p className="dashboard-reqs">
+                      <strong>Requirements:</strong> {sch.requirements}
+                    </p>
                   </div>
-                  <p className="dashboard-reqs">
-                    <strong>Requirements:</strong> {sch.requirements}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
-      {/* ENGR ADMIN VIEW */}
-      {user.role === "engr_admin" && (
-        <section className="dashboard-section dashboard-section--admin">
-          <div className="dashboard-card dashboard-card--admin">
+        {/* ENGR ADMIN VIEW */}
+        {user.role === "engr_admin" && (
+          <section className="dashboard-section dashboard-section--admin">
             <h3 className="dashboard-section-title">Admin Panel</h3>
             <p className="dashboard-text">
               As an ENGR Admin, you can manage scholarships, users, and reports.
             </p>
 
             <div className="dashboard-admin-actions">
-              {/* future pages – disabled for now */}
+              {/* Future page – disabled */}
               <button
                 className="dashboard-chip dashboard-chip--disabled"
                 type="button"
@@ -133,12 +137,12 @@ export default function Dashboard() {
                 User Edit / Create / Delete
               </button>
 
-              {/* matches /admin/scholarships route */}
+              {/* Matches /admin/scholarships route */}
               <Link className="dashboard-chip" to="/admin/scholarships">
                 Application Edit / Create / Delete
               </Link>
 
-              {/* future page – disabled */}
+              {/* Future page – disabled */}
               <button
                 className="dashboard-chip dashboard-chip--disabled"
                 type="button"
@@ -147,12 +151,12 @@ export default function Dashboard() {
                 Disbursement Controls
               </button>
 
-              {/* matches /admin/reports route */}
+              {/* Matches /admin/reports route */}
               <Link className="dashboard-chip" to="/admin/reports">
                 Reports &amp; Analytics
               </Link>
 
-              {/* future pages – disabled */}
+              {/* Future page – disabled */}
               <button
                 className="dashboard-chip dashboard-chip--disabled"
                 type="button"
@@ -160,6 +164,7 @@ export default function Dashboard() {
               >
                 User Password Management
               </button>
+
               <button
                 className="dashboard-chip dashboard-chip--secondary dashboard-chip--disabled"
                 type="button"
@@ -176,47 +181,51 @@ export default function Dashboard() {
               <ul className="dashboard-admin-list">
                 {scholarships.map((sch) => (
                   <li key={sch.id} className="dashboard-admin-item">
-                    <span>{sch.name}</span>
-                    <span>Deadline: {formatDeadline(sch.deadline)}</span>
-                    <span>${sch.amount}</span>
+                    <span className="dashboard-admin-name">{sch.name}</span>
+                    <span className="dashboard-admin-deadline">
+                      Deadline: {formatDeadline(sch.deadline)}
+                    </span>
+                    <span className="dashboard-admin-amount">
+                      ${sch.amount}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* REVIEWER VIEW */}
-      {user.role === "reviewer" && (
-        <section className="dashboard-section">
-          <h3 className="dashboard-section-title">Reviewer Panel</h3>
-          <p className="dashboard-text">
-            Assigned applications will appear here in a future update.
-          </p>
-        </section>
-      )}
+        {/* REVIEWER VIEW */}
+        {user.role === "reviewer" && (
+          <section className="dashboard-section">
+            <h3 className="dashboard-section-title">Reviewer Panel</h3>
+            <p className="dashboard-text">
+              Assigned applications will appear here in a future update.
+            </p>
+          </section>
+        )}
 
-      {/* SPONSOR / DONOR VIEW */}
-      {user.role === "sponsor_donor" && (
-        <section className="dashboard-section">
-          <h3 className="dashboard-section-title">Sponsor/Donor Portal</h3>
-          <p className="dashboard-text">
-            Donation history, sponsored scholarships, and student stats will
-            appear here.
-          </p>
-        </section>
-      )}
+        {/* SPONSOR / DONOR VIEW */}
+        {user.role === "sponsor_donor" && (
+          <section className="dashboard-section">
+            <h3 className="dashboard-section-title">Sponsor/Donor Portal</h3>
+            <p className="dashboard-text">
+              Donation history, sponsored scholarships, and student stats will
+              appear here.
+            </p>
+          </section>
+        )}
 
-      {/* STEWARD VIEW */}
-      {user.role === "steward" && (
-        <section className="dashboard-section">
-          <h3 className="dashboard-section-title">Steward Portal</h3>
-          <p className="dashboard-text">
-            Stewardship responsibilities and workflow will appear here.
-          </p>
-        </section>
-      )}
+        {/* STEWARD VIEW */}
+        {user.role === "steward" && (
+          <section className="dashboard-section">
+            <h3 className="dashboard-section-title">Steward Portal</h3>
+            <p className="dashboard-text">
+              Stewardship responsibilities and workflow will appear here.
+            </p>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

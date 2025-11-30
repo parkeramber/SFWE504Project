@@ -1,4 +1,104 @@
-/* Admin-specific styling */
+/* Base layout for dashboard pages (used by dashboard + scholarship GUI) */
+
+.dashboard-page {
+  padding: 2rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2.5rem;        /* ⬅ add space between the two cards */
+  flex-wrap: wrap;    /* ⬅ so they stack nicely on smaller screens */
+}
+
+
+.dashboard-card {
+  max-width: 960px;
+  width: 100%;
+  background-color: #ffffff;
+  border-radius: 1rem;
+  padding: 1.75rem 2rem;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e5e7eb;
+}
+
+.dashboard-card + .dashboard-card {
+  margin-top: 1.5rem;
+}
+
+.dashboard-card-inner {
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  padding: 0.9rem 1.1rem;
+  background-color: #f9fafb;
+}
+
+.dashboard-header {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dashboard-subtitle {
+  margin-top: 0.25rem;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.dashboard-section {
+  margin-top: 1.5rem;
+}
+
+.dashboard-section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-section-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-text {
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+/* Used in ScholarshipCreateEditGUI lead text */
+.lead-text {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  color: #374151;
+  font-size: 0.98rem;
+}
+
+/* Applicant list styles */
+
+.dashboard-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.9rem;
+}
+
+.dashboard-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin-top: 0.4rem;
+}
+
+.dashboard-reqs {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* Admin layout */
 
 .dashboard-section--admin {
   margin-top: 1.5rem;
@@ -8,7 +108,8 @@
   padding: 1.75rem 2rem;
 }
 
-.dashboard-admin-grid {
+/* This is the container your admin chips live in */
+.dashboard-admin-actions {
   margin-top: 1rem;
   margin-bottom: 1.5rem;
   display: flex;
@@ -16,13 +117,15 @@
   gap: 0.75rem;
 }
 
+/* Chips (buttons/links) */
+
 .dashboard-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.6rem 1.4rem;
   border-radius: 999px;
-  background-color: #111827; /* dark navy/black */
+  background-color: #111827;
   color: #ffffff;
   font-size: 0.9rem;
   font-weight: 600;
@@ -47,6 +150,19 @@
 
 .dashboard-chip--secondary:hover {
   background-color: #d1d5db;
+}
+
+.dashboard-chip--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.dashboard-chip--disabled:hover {
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
 }
 
 /* Admin table/list */
@@ -81,15 +197,90 @@
   font-weight: 600;
   text-align: right;
 }
-.dashboard-chip--disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
+
+/* Error / success messages */
+
+.dashboard-error {
+  color: #b91c1c;
+  font-weight: 500;
 }
 
-.dashboard-chip--disabled:hover {
-  opacity: 0.6;
-  box-shadow: none;
-  transform: none;
+.dashboard-success {
+  color: #166534;
+  font-weight: 500;
+}
+
+/* ScholarshipCreateEditGUI form/table */
+
+.scholarship-form {
+  margin-top: 1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.form-row label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.form-full {
+  flex: 1 0 100%;
+}
+
+.scholarship-form input,
+.scholarship-form textarea {
+  margin-top: 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.form-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.scholarship-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.scholarship-table th,
+.scholarship-table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.6rem;
+}
+
+.scholarship-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.small-button {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 0.4rem;
+  border: 1px solid #9ca3af;
+  background-color: #f3f4f6;
+  cursor: pointer;
+}
+
+.small-button:hover {
+  background-color: #e5e7eb;
+}
+
+.small-button.danger {
+  border-color: #b91c1c;
+  color: #b91c1c;
 }

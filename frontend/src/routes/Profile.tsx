@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { fetchMe, updateProfile, changePassword, refreshSession } from "../auth/api";
-import { clearTokens, loadTokens, saveTokens } from "../auth/session";
+import { fetchMe, updateProfile, changePassword } from "../auth/api";
+import { loadTokens } from "../auth/session";
 import type { User } from "../auth/types";
 import Notification from "../components/Notification";
 
@@ -15,50 +16,68 @@ export default function ProfilePage() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        const me = await fetchMe(); // no args – uses central token logic
+
+        if (cancelled) return;
+
+        // If fetchMe returns null, session is gone
+        if (!me) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        setUser(me);
+        setFirstName(me.first_name ?? "");
+        setLastName(me.last_name ?? "");
+      } catch (err) {
+        console.error("Error loading profile", err);
+        if (!cancelled) {
+          navigate("/login", { replace: true });
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  const handleProfileSave = async (e: FormEvent) => {
+    e.preventDefault();
+
     const tokens = loadTokens();
     if (!tokens) {
       navigate("/login", { replace: true });
       return;
     }
-    const hydrate = async () => {
-      try {
-        const me = await fetchMe(tokens.accessToken);
-        setUser(me);
-        setFirstName(me.first_name ?? "");
-        setLastName(me.last_name ?? "");
-      } catch {
-        try {
-          const refreshed = await refreshSession(tokens.refreshToken);
-          saveTokens(refreshed);
-          const me = await fetchMe(refreshed.accessToken);
-          setUser(me);
-          setFirstName(me.first_name ?? "");
-          setLastName(me.last_name ?? "");
-        } catch (err: any) {
-          clearTokens();
-          navigate("/login", { replace: true });
-        }
-      }
-    };
-    void hydrate();
-  }, [navigate]);
 
-  const handleProfileSave = async (e: FormEvent) => {
-    e.preventDefault();
-    const tokens = loadTokens();
-    if (!tokens) return;
     setStatus(null);
     setError(null);
+
     try {
       const updated = await updateProfile(tokens.accessToken, {
         first_name: firstName || undefined,
         last_name: lastName || undefined,
       });
       setUser(updated);
-      window.dispatchEvent(new CustomEvent("eduaid:user-updated", { detail: updated }));
+      window.dispatchEvent(
+        new CustomEvent("eduaid:user-updated", { detail: updated }),
+      );
       setStatus("Profile updated");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -68,12 +87,21 @@ export default function ProfilePage() {
 
   const handlePasswordChange = async (e: FormEvent) => {
     e.preventDefault();
+
     const tokens = loadTokens();
-    if (!tokens) return;
+    if (!tokens) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
     setStatus(null);
     setError(null);
+
     try {
-      await changePassword(tokens.accessToken, { currentPassword: pwdCurrent, newPassword: pwdNew });
+      await changePassword(tokens.accessToken, {
+        currentPassword: pwdCurrent,
+        newPassword: pwdNew,
+      });
       setStatus("Password changed");
       setPwdCurrent("");
       setPwdNew("");
@@ -82,6 +110,21 @@ export default function ProfilePage() {
       setError(detail || "Password change failed");
     }
   };
+
+  if (loading && !user) {
+    return (
+      <div className="profile-page">
+        <div className="profile-card">
+          <p>Loading profile…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    // fetchMe already handled logout / redirect
+    return null;
+  }
 
   return (
     <div className="profile-page">
@@ -108,7 +151,7 @@ export default function ProfilePage() {
           <form className="profile-section" onSubmit={handleProfileSave}>
             <label>
               Email
-              <input type="email" value={user?.email || ""} disabled />
+              <input type="email" value={user.email} disabled />
             </label>
             <label>
               First name
