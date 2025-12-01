@@ -21,6 +21,24 @@ export interface Application {
   created_at?: string;
 }
 
+export interface ReviewInput {
+  reviewer_id: number;
+  score?: number | null;
+  comment?: string | null;
+  status?: "in_review" | "accepted" | "rejected";
+}
+
+export interface Review {
+  id: number;
+  application_id: number;
+  reviewer_id: number;
+  score?: number | null;
+  comment?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 
 // ----------------------
 // EXISTING FUNCTIONS
@@ -63,4 +81,37 @@ export async function listApplicationsAssignedToReviewer(
 ): Promise<Application[]> {
   const res = await api.get(`/applications/assigned/${reviewerId}`);
   return res.data as Application[];
+}
+
+// Reviewer: create or update a review
+export async function submitReview(
+  applicationId: number,
+  input: ReviewInput,
+): Promise<Review> {
+  const res = await api.post(`/applications/${applicationId}/reviews`, input);
+  return res.data as Review;
+}
+
+export async function listReviewsForApplication(
+  applicationId: number,
+): Promise<Review[]> {
+  const res = await api.get(`/applications/${applicationId}/reviews`);
+  return res.data as Review[];
+}
+
+export async function listReviewsByReviewer(
+  reviewerId: number,
+): Promise<Review[]> {
+  const res = await api.get(`/applications/reviews/by-reviewer/${reviewerId}`);
+  return res.data as Review[];
+}
+
+export async function updateApplicationStatus(
+  applicationId: number,
+  status: "in_review" | "accepted" | "rejected",
+): Promise<Application> {
+  const res = await api.patch(`/applications/${applicationId}/status`, {
+    status,
+  });
+  return res.data as Application;
 }

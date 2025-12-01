@@ -42,3 +42,7 @@ class ApplicationRead(BaseModel):
 
 class ApplicationAssign(BaseModel):
     reviewer_id: int
+
+
+class ApplicationStatusUpdate(BaseModel):
+    status: str
