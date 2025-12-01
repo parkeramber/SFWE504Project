@@ -3,19 +3,31 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { fetchMe, updateProfile, changePassword } from "../auth/api";
-import { loadTokens } from "../auth/session";
+import { loadTokens, saveTokens } from "../auth/session";
 import type { User } from "../auth/types";
+import { fetchApplicantProfile, upsertApplicantProfile } from "../applicant/api";
 import Notification from "../components/Notification";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [netId, setNetId] = useState("");
+  const [degreeMajor, setDegreeMajor] = useState("");
+  const [degreeMinor, setDegreeMinor] = useState("");
+  const [gpa, setGpa] = useState("");
+  const [academicAchievements, setAcademicAchievements] = useState("");
+  const [financialInformation, setFinancialInformation] = useState("");
+  const [writtenEssays, setWrittenEssays] = useState("");
   const [pwdCurrent, setPwdCurrent] = useState("");
   const [pwdNew, setPwdNew] = useState("");
+  const [pwdConfirm, setPwdConfirm] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
+  const [appStatus, setAppStatus] = useState<string | null>(null);
+  const [appError, setAppError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"profile" | "applicant" | "password">("profile");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -38,6 +50,32 @@ export default function ProfilePage() {
         setUser(me);
         setFirstName(me.first_name ?? "");
         setLastName(me.last_name ?? "");
+
+        if (me.role === "applicant") {
+          const tokens = loadTokens();
+          if (tokens) {
+            try {
+              const profile = await fetchApplicantProfile(tokens.accessToken);
+              setStudentId(profile.student_id);
+              setNetId(profile.netid);
+              setDegreeMajor(profile.degree_major);
+              setDegreeMinor(profile.degree_minor ?? "");
+              setGpa(
+                profile.gpa !== null && profile.gpa !== undefined
+                  ? String(profile.gpa)
+                  : "",
+              );
+              setAcademicAchievements(profile.academic_achievements ?? "");
+              setFinancialInformation(profile.financial_information ?? "");
+              setWrittenEssays(profile.written_essays ?? "");
+            } catch (err: any) {
+              const detail = err?.response?.data?.detail;
+              if (detail && detail !== "Applicant profile not found") {
+                console.error("Error loading applicant profile", err);
+              }
+            }
+          }
+        }
       } catch (err) {
         console.error("Error loading profile", err);
         if (!cancelled) {
@@ -85,6 +123,48 @@ export default function ProfilePage() {
     }
   };
 
+  const handleApplicantProfileSave = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+
+    const tokens = loadTokens();
+    if (!tokens) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    const gpaNumber = Number(gpa);
+    if (Number.isNaN(gpaNumber) || gpaNumber < 0 || gpaNumber > 4) {
+      setAppError("Enter a GPA between 0.00 and 4.00.");
+      return;
+    }
+
+    setAppStatus(null);
+    setAppError(null);
+
+    try {
+      await upsertApplicantProfile(tokens.accessToken, {
+        first_name: firstName || undefined,
+        last_name: lastName || undefined,
+        student_id: studentId,
+        netid: netId,
+        degree_major: degreeMajor,
+        degree_minor: degreeMinor || undefined,
+        gpa: gpaNumber,
+        academic_achievements: academicAchievements || undefined,
+        financial_information: financialInformation || undefined,
+        written_essays: writtenEssays || undefined,
+      });
+
+      // Ensure onboarding flag is cleared if it existed
+      saveTokens({ ...tokens, needsProfileSetup: false });
+
+      setAppStatus("Applicant information saved");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setAppError(detail || "Applicant info update failed");
+    }
+  };
+
   const handlePasswordChange = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -97,6 +177,11 @@ export default function ProfilePage() {
     setStatus(null);
     setError(null);
 
+    if (pwdNew !== pwdConfirm) {
+      setError("New passwords do not match.");
+      return;
+    }
+
     try {
       await changePassword(tokens.accessToken, {
         currentPassword: pwdCurrent,
@@ -105,6 +190,7 @@ export default function ProfilePage() {
       setStatus("Password changed");
       setPwdCurrent("");
       setPwdNew("");
+      setPwdConfirm("");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       setError(detail || "Password change failed");
@@ -138,6 +224,15 @@ export default function ProfilePage() {
           >
             Profile
           </button>
+          {user.role === "applicant" && (
+            <button
+              type="button"
+              className={activeTab === "applicant" ? "active" : ""}
+              onClick={() => setActiveTab("applicant")}
+            >
+              Applicant details
+            </button>
+          )}
           <button
             type="button"
             className={activeTab === "password" ? "active" : ""}
@@ -147,7 +242,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {activeTab === "profile" ? (
+        {activeTab === "profile" && (
           <form className="profile-section" onSubmit={handleProfileSave}>
             <label>
               Email
@@ -173,7 +268,94 @@ export default function ProfilePage() {
             </label>
             <button type="submit">Save profile</button>
           </form>
-        ) : (
+        )}
+
+        {activeTab === "applicant" && user.role === "applicant" && (
+          <form className="profile-section" onSubmit={handleApplicantProfileSave}>
+            <label>
+              Student ID
+              <input
+                type="text"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                placeholder="Student ID"
+                required
+              />
+            </label>
+            <label>
+              NetID
+              <input
+                type="text"
+                value={netId}
+                onChange={(e) => setNetId(e.target.value)}
+                placeholder="NetID"
+                required
+              />
+            </label>
+            <label>
+              Degree major
+              <input
+                type="text"
+                value={degreeMajor}
+                onChange={(e) => setDegreeMajor(e.target.value)}
+                placeholder="Degree major"
+                required
+              />
+            </label>
+            <label>
+              Degree minor (optional)
+              <input
+                type="text"
+                value={degreeMinor}
+                onChange={(e) => setDegreeMinor(e.target.value)}
+                placeholder="Degree minor"
+              />
+            </label>
+            <label>
+              GPA
+              <input
+                type="number"
+                min="0"
+                max="4"
+                step="0.01"
+                value={gpa}
+                onChange={(e) => setGpa(e.target.value)}
+                placeholder="e.g. 3.80"
+                required
+              />
+            </label>
+            <label>
+              Academic achievements
+              <textarea
+                value={academicAchievements}
+                onChange={(e) => setAcademicAchievements(e.target.value)}
+                placeholder="Dean's list, awards, research, etc."
+                rows={3}
+              />
+            </label>
+            <label>
+              Financial information
+              <textarea
+                value={financialInformation}
+                onChange={(e) => setFinancialInformation(e.target.value)}
+                placeholder="Aid status, needs, circumstances..."
+                rows={3}
+              />
+            </label>
+            <label>
+              Written essays
+              <textarea
+                value={writtenEssays}
+                onChange={(e) => setWrittenEssays(e.target.value)}
+                placeholder="Paste any prepared essays or notes."
+                rows={4}
+              />
+            </label>
+            <button type="submit">Save applicant info</button>
+          </form>
+        )}
+
+        {activeTab === "password" && (
           <form className="profile-section" onSubmit={handlePasswordChange}>
             <label>
               Current password
@@ -195,6 +377,16 @@ export default function ProfilePage() {
                 required
               />
             </label>
+            <label>
+              Re-type new password
+              <input
+                type="password"
+                value={pwdConfirm}
+                onChange={(e) => setPwdConfirm(e.target.value)}
+                placeholder="Re-type new password"
+                required
+              />
+            </label>
             <button type="submit">Update password</button>
           </form>
         )}
@@ -206,6 +398,18 @@ export default function ProfilePage() {
             onClose={() => {
               setStatus(null);
               setError(null);
+            }}
+            autoHideMs={3000}
+          />
+        )}
+
+        {(appStatus || appError) && (
+          <Notification
+            kind={appError ? "error" : "success"}
+            message={appError || appStatus || ""}
+            onClose={() => {
+              setAppStatus(null);
+              setAppError(null);
             }}
             autoHideMs={3000}
           />

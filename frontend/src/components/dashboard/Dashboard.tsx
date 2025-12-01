@@ -657,13 +657,9 @@ export default function Dashboard() {
             </p>
 
             <div className="dashboard-admin-actions">
-              <button
-                className="dashboard-chip dashboard-chip--disabled"
-                type="button"
-                disabled
-              >
+              <Link className="dashboard-chip" to="/admin/users">
                 User Edit / Create / Delete
-              </button>
+              </Link>
 
               <Link className="dashboard-chip" to="/admin/scholarships">
                 Application Edit / Create / Delete
@@ -774,6 +770,7 @@ export default function Dashboard() {
                 ))}
               </ul>
             )}
+
           </div>
         </section>
       )}

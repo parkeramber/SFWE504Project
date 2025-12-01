@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AuthPage from "./auth/AuthPage";
 import Dashboard from "./components/dashboard/Dashboard";   // ⬅ this one
 import ProfilePage from "./routes/Profile";
+import ApplicantOnboarding from "./routes/ApplicantOnboarding";
+import AdminUsersPage from "./routes/AdminUsers";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import AdminReports from "./routes/AdminReportsGUI";
@@ -15,12 +17,28 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<AuthPage defaultMode="login" />} />
         <Route path="/register" element={<AuthPage defaultMode="register" />} />
+        <Route
+          path="/applicant/onboarding"
+          element={
+            <ProtectedRoute>
+              <ApplicantOnboarding />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              <AdminUsersPage />
             </ProtectedRoute>
           }
         />

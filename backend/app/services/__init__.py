@@ -15,11 +15,16 @@ from .application_service import (
     get_application,
     assign_reviewer,
     list_applications_for_reviewer,
-    list_all_applications, 
+    list_all_applications,
     upsert_review,
     list_reviews_for_application,
     list_reviews_for_reviewer,
     update_application_status,
+)
+from .applicant_profile_service import (
+    applicant_profile_exists,
+    get_profile_for_user,
+    upsert_applicant_profile,
 )
 
 __all__ = [
@@ -41,4 +46,8 @@ __all__ = [
     "list_reviews_for_application",
     "list_reviews_for_reviewer",
     "update_application_status",
+    # applicant profiles
+    "applicant_profile_exists",
+    "get_profile_for_user",
+    "upsert_applicant_profile",
 ]

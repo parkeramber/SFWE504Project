@@ -43,5 +43,5 @@ export function getAccessToken(): string | null {
 export function logout() {
   clearTokens();
   // Hard redirect is fine for this project
-  window.location.href = "/auth";
+  window.location.href = "/login";
 }
