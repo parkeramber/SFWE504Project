@@ -38,6 +38,10 @@ def create_scholarship(db: Session, payload: ScholarshipCreate) -> Scholarship:
         amount=payload.amount,
         deadline=payload.deadline,
         requirements=payload.requirements,
+        # NEW flags:
+        requires_essay=payload.requires_essay,
+        requires_transcript=payload.requires_transcript,
+        requires_questions=payload.requires_questions,
     )
     db.add(sch)
     db.commit()
@@ -68,6 +72,14 @@ def update_scholarship(
         sch.deadline = payload.deadline
     if payload.requirements is not None:
         sch.requirements = payload.requirements
+
+    # NEW optional updates for flags
+    if payload.requires_essay is not None:
+        sch.requires_essay = payload.requires_essay
+    if payload.requires_transcript is not None:
+        sch.requires_transcript = payload.requires_transcript
+    if payload.requires_questions is not None:
+        sch.requires_questions = payload.requires_questions
 
     db.add(sch)
     db.commit()

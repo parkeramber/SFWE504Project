@@ -6,27 +6,37 @@ export type Scholarship = {
   name: string;
   description: string;
   amount: number;
-  deadline: string;
+  deadline: string;      // ISO string from backend
   requirements: string;
-};
 
-export async function searchScholarships(keyword: string): Promise<Scholarship[]> {
-  const res = await api.get<Scholarship[]>("/scholarships/search", {
-    params: { keyword },
-  });
-  return res.data;
-}
+  // NEW flags from backend
+  requires_essay: boolean;
+  requires_transcript: boolean;
+  requires_questions: boolean;
+};
 
 export type ScholarshipInput = {
   name: string;
   description: string;
   amount: number;
-  deadline: string;
+  deadline: string;      // "YYYY-MM-DD" for <input type="date" />
   requirements: string;
+
+  // optional on create/edit (backend has defaults)
+  requires_essay?: boolean;
+  requires_transcript?: boolean;
+  requires_questions?: boolean;
 };
 
 export async function listScholarships(): Promise<Scholarship[]> {
   const res = await api.get<Scholarship[]>("/scholarships/");
+  return res.data;
+}
+
+export async function searchScholarships(keyword: string): Promise<Scholarship[]> {
+  const res = await api.get<Scholarship[]>("/scholarships/search", {
+    params: { keyword },
+  });
   return res.data;
 }
 

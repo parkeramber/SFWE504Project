@@ -6,7 +6,7 @@ from app.database import Base, engine
 import app.models  # ensures models are registered with Base
 
 from app.auth import router as auth_router
-from app.api.v1 import routes_scholarships, routes_admin
+from app.api.v1 import routes_scholarships, routes_admin, routes_applications
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,3 +33,6 @@ app.include_router(routes_scholarships.router, prefix="/api/v1", tags=["scholars
 
 # Admin routes: /api/v1/admin/summary
 app.include_router(routes_admin.router, prefix="/api/v1", tags=["admin"])
+
+# Application routes
+app.include_router(routes_applications.router, prefix="/api/v1", tags=["applications"])

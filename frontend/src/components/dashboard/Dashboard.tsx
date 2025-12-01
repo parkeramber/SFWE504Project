@@ -10,6 +10,7 @@ import {
   searchScholarships,
   type Scholarship,
 } from "../../scholarships/api";
+import { createApplication } from "../../applications/api";
 
 function formatDeadline(deadline: string) {
   const d = new Date(deadline);
@@ -26,7 +27,22 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searching, setSearching] = useState(false);
 
-  // initial load
+  // Application-related state
+  const [applyStatus, setApplyStatus] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [activeScholarship, setActiveScholarship] =
+    useState<Scholarship | null>(null);
+
+  // Track scholarships applied to (frontend only)
+  const [appliedIds, setAppliedIds] = useState<number[]>([]);
+
+  // Form fields
+  const [essayText, setEssayText] = useState("");
+  const [transcriptUrl, setTranscriptUrl] = useState("");
+  const [answers, setAnswers] = useState("");
+  const [submittingApp, setSubmittingApp] = useState(false);
+
+  // -------- Initial load --------
   useEffect(() => {
     let cancelled = false;
 
@@ -57,12 +73,12 @@ export default function Dashboard() {
     };
 
     void load();
-
     return () => {
       cancelled = true;
     };
   }, []);
 
+  // -------- Search handling --------
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -70,7 +86,6 @@ export default function Dashboard() {
     const term = searchTerm.trim();
     setError(null);
 
-    // empty search → show all
     if (!term) {
       try {
         setSearching(true);
@@ -118,6 +133,59 @@ export default function Dashboard() {
     );
   }
 
+  // -------- Apply flow --------
+  const handleApply = (scholarship: Scholarship) => {
+    if (!user) return;
+
+    setActiveScholarship(scholarship);
+    setEssayText("");
+    setTranscriptUrl("");
+    setAnswers("");
+    setApplyStatus(null);
+    setApplyError(null);
+  };
+
+  const handleSubmitApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !activeScholarship) return;
+
+    setSubmittingApp(true);
+    setApplyStatus(null);
+    setApplyError(null);
+
+    try {
+      await createApplication({
+        user_id: user.id,
+        scholarship_id: activeScholarship.id,
+        essay_text: activeScholarship.requires_essay ? essayText || null : null,
+        transcript_url: activeScholarship.requires_transcript
+          ? transcriptUrl || null
+          : null,
+        answers_json:
+          activeScholarship.requires_questions && answers
+            ? JSON.stringify({ answers })
+            : null,
+      });
+
+      // Mark this scholarship as applied (for this session)
+      setAppliedIds((prev) =>
+        prev.includes(activeScholarship.id)
+          ? prev
+          : [...prev, activeScholarship.id],
+      );
+
+      setApplyStatus(`Application submitted for "${activeScholarship.name}".`);
+      setActiveScholarship(null); // close the form
+    } catch (err: any) {
+      console.error("Error submitting application", err);
+      const detail = err?.response?.data?.detail;
+      setApplyError(detail || "Could not submit application.");
+    } finally {
+      setSubmittingApp(false);
+    }
+  };
+
+  // -------- Loading / no user --------
   if (loading) {
     return (
       <div className="dashboard">
@@ -134,11 +202,17 @@ export default function Dashboard() {
     );
   }
 
-  if (!user) {
-    // fetchMe will have logged out if token was bad
-    return null;
-  }
+  if (!user) return null;
 
+  // Split scholarships into "available" and "applied" using our local state
+  const availableScholarships = scholarships.filter(
+    (s) => !appliedIds.includes(s.id),
+  );
+  const appliedScholarships = scholarships.filter((s) =>
+    appliedIds.includes(s.id),
+  );
+
+  // -------- Render --------
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -150,34 +224,180 @@ export default function Dashboard() {
         </p>
       </header>
 
-      {/* APPLICANT VIEW */}
+      {/* APPLICANT VIEW – Available scholarships */}
       {user.role === "applicant" && (
-        <section className="dashboard-section">
-          <h3 className="dashboard-section-title">Available Scholarships</h3>
+        <>
+          <section className="dashboard-section">
+            <h3 className="dashboard-section-title">Available Scholarships</h3>
 
-          {renderSearchBar()}
+            {renderSearchBar()}
 
-          {error && <p className="dashboard-error">{error}</p>}
+            {applyError && <p className="dashboard-error">{applyError}</p>}
+            {applyStatus && <p className="dashboard-success">{applyStatus}</p>}
 
-          {scholarships.length === 0 ? (
-            <p>No scholarships available yet.</p>
-          ) : (
-            <div className="dashboard-list">
-              {scholarships.map((sch) => (
-                <div key={sch.id} className="dashboard-card">
-                  <h3>{sch.name}</h3>
-                  <p>{sch.description}</p>
-                  <div className="dashboard-meta">
-                    <span>Amount: ${sch.amount}</span>
-                    <span>Deadline: {formatDeadline(sch.deadline)}</span>
+            {error && <p className="dashboard-error">{error}</p>}
+
+            {availableScholarships.length === 0 ? (
+              <p>There are no more scholarships to apply for right now.</p>
+            ) : (
+              <div className="dashboard-list">
+                {availableScholarships.map((sch) => (
+                  <div key={sch.id} className="dashboard-card">
+                    <h3>{sch.name}</h3>
+                    <p>{sch.description}</p>
+
+                    <div className="dashboard-badges">
+                      {sch.requires_essay && (
+                        <span className="badge">Essay required</span>
+                      )}
+                      {sch.requires_transcript && (
+                        <span className="badge">Transcript required</span>
+                      )}
+                      {sch.requires_questions && (
+                        <span className="badge">Extra questions</span>
+                      )}
+                    </div>
+
+                    <div className="dashboard-meta">
+                      <span>Amount: ${sch.amount}</span>
+                      <span>Deadline: {formatDeadline(sch.deadline)}</span>
+                    </div>
+
+                    <p className="dashboard-reqs">
+                      <strong>Requirements:</strong>{" "}
+                      {sch.requirements || "See application for details."}
+                    </p>
+
+                    <button
+                      type="button"
+                      className="dashboard-button small"
+                      onClick={() => handleApply(sch)}
+                    >
+                      Apply
+                    </button>
                   </div>
-                  <p className="dashboard-reqs">
-                    <strong>Requirements:</strong> {sch.requirements}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* "My Applications" section */}
+          {appliedScholarships.length > 0 && (
+            <section className="dashboard-section">
+              <h3 className="dashboard-section-title">My Applications</h3>
+              <p className="dashboard-text">
+                These are the scholarships you’ve applied to in this session.
+              </p>
+              <ul className="dashboard-admin-list">
+                {appliedScholarships.map((sch) => (
+                  <li key={sch.id} className="dashboard-admin-item">
+                    <span>{sch.name}</span>
+                    <span>Deadline: {formatDeadline(sch.deadline)}</span>
+                    <span>${sch.amount}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
+        </>
+      )}
+
+      {/* Application form for selected scholarship (applicant view) */}
+      {activeScholarship && user.role === "applicant" && (
+        <section className="dashboard-section">
+          <h3 className="dashboard-section-title">
+            Apply to: {activeScholarship.name}
+          </h3>
+
+          {applyError && <p className="dashboard-error">{applyError}</p>}
+          {applyStatus && <p className="dashboard-success">{applyStatus}</p>}
+
+          <form className="dashboard-form" onSubmit={handleSubmitApplication}>
+            {activeScholarship.requires_essay && (
+              <div className="dashboard-form-field">
+                <label htmlFor="essay">
+                  Essay <span className="required">*</span>
+                </label>
+                <textarea
+                  id="essay"
+                  value={essayText}
+                  onChange={(e) => setEssayText(e.target.value)}
+                  rows={6}
+                  placeholder="Write your scholarship essay here..."
+                  required
+                />
+                <p className="field-hint">
+                  Tip: Most scholarships expect at least 150–250 words.
+                </p>
+              </div>
+            )}
+
+            {activeScholarship.requires_transcript && (
+              <div className="dashboard-form-field">
+                <label htmlFor="transcript">
+                  Transcript link <span className="required">*</span>
+                </label>
+                <input
+                  id="transcript"
+                  type="url"
+                  value={transcriptUrl}
+                  onChange={(e) => setTranscriptUrl(e.target.value)}
+                  placeholder="https://example.com/your-transcript.pdf"
+                  required
+                />
+                <p className="field-hint">
+                  You can paste a link to a PDF, Google Drive file, or secure
+                  document portal.
+                </p>
+              </div>
+            )}
+
+            {activeScholarship.requires_questions && (
+              <div className="dashboard-form-field">
+                <label htmlFor="answers">
+                  Additional questions / short answers{" "}
+                  <span className="required">*</span>
+                </label>
+                <textarea
+                  id="answers"
+                  value={answers}
+                  onChange={(e) => setAnswers(e.target.value)}
+                  rows={4}
+                  placeholder="Answer any extra questions here..."
+                  required
+                />
+              </div>
+            )}
+
+            {!activeScholarship.requires_essay &&
+              !activeScholarship.requires_transcript &&
+              !activeScholarship.requires_questions && (
+                <p className="dashboard-text">
+                  This scholarship does not require an essay, transcript, or
+                  extra questions. Click submit to confirm your application.
+                </p>
+              )}
+
+            <div className="dashboard-form-actions">
+              <button
+                type="button"
+                className="dashboard-button secondary"
+                onClick={() => {
+                  setActiveScholarship(null);
+                  setApplyError(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="dashboard-button primary"
+                disabled={submittingApp}
+              >
+                {submittingApp ? "Submitting…" : "Submit Application"}
+              </button>
+            </div>
+          </form>
         </section>
       )}
 

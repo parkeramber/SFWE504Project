@@ -15,9 +15,12 @@ import {
 type FormState = {
   name: string;
   description: string;
-  amount: string;         // keep as string for <input>, convert before send
-  deadline: string;       // "YYYY-MM-DD"
+  amount: string; // keep as string for <input>, convert before send
+  deadline: string; // "YYYY-MM-DD"
   requirements: string;
+  requires_essay: boolean;
+  requires_transcript: boolean;
+  requires_questions: boolean;
 };
 
 const emptyForm: FormState = {
@@ -26,6 +29,9 @@ const emptyForm: FormState = {
   amount: "",
   deadline: "",
   requirements: "",
+  requires_essay: false,
+  requires_transcript: false,
+  requires_questions: false,
 };
 
 export default function ScholarshipCreateEditGUI() {
@@ -78,11 +84,17 @@ export default function ScholarshipCreateEditGUI() {
     };
   }, []);
 
-  // Handle field changes
+  // Handle field changes (supports text inputs, textarea, and checkboxes)
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) {
-    const { name, value } = e.target;
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    const { name } = target;
+    const value =
+      target instanceof HTMLInputElement && target.type === "checkbox"
+        ? target.checked
+        : target.value;
+
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
@@ -96,6 +108,9 @@ export default function ScholarshipCreateEditGUI() {
       // backend sends full ISO date, e.g. "2025-02-28T00:00:00"
       deadline: s.deadline.slice(0, 10),
       requirements: s.requirements,
+      requires_essay: !!s.requires_essay,
+      requires_transcript: !!s.requires_transcript,
+      requires_questions: !!s.requires_questions,
     });
     setSuccess(null);
     setError(null);
@@ -119,6 +134,9 @@ export default function ScholarshipCreateEditGUI() {
       amount: Number(form.amount),
       deadline: form.deadline,
       requirements: form.requirements.trim(),
+      requires_essay: form.requires_essay,
+      requires_transcript: form.requires_transcript,
+      requires_questions: form.requires_questions,
     };
 
     if (!payload.name || !payload.amount || !payload.deadline) {
@@ -270,6 +288,40 @@ export default function ScholarshipCreateEditGUI() {
                 onChange={handleChange}
               />
             </label>
+          </div>
+
+          {/* NEW: Application requirement toggles */}
+          <div className="form-row">
+            <fieldset className="form-full">
+              <legend>Application requirements</legend>
+              <label className="checkbox-inline">
+                <input
+                  type="checkbox"
+                  name="requires_essay"
+                  checked={form.requires_essay}
+                  onChange={handleChange}
+                />
+                Essay required
+              </label>
+              <label className="checkbox-inline">
+                <input
+                  type="checkbox"
+                  name="requires_transcript"
+                  checked={form.requires_transcript}
+                  onChange={handleChange}
+                />
+                Transcript required
+              </label>
+              <label className="checkbox-inline">
+                <input
+                  type="checkbox"
+                  name="requires_questions"
+                  checked={form.requires_questions}
+                  onChange={handleChange}
+                />
+                Extra questions required
+              </label>
+            </fieldset>
           </div>
 
           <div className="form-actions">

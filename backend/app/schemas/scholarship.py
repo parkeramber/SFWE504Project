@@ -7,33 +7,38 @@ from pydantic import BaseModel
 
 class ScholarshipBase(BaseModel):
     name: str
-    description: Optional[str] = None
-    amount: int  # change to float/Decimal if your DB uses that
+    description: str
+    amount: int
     deadline: date
     requirements: Optional[str] = None
 
+    # NEW fields – what the admin can toggle
+    requires_essay: bool = False
+    requires_transcript: bool = False
+    requires_questions: bool = False
+
 
 class ScholarshipCreate(ScholarshipBase):
-    """Schema for creating a scholarship."""
+    """Fields required when creating a scholarship."""
     pass
 
 
 class ScholarshipUpdate(BaseModel):
-    """
-    Schema for updating a scholarship.
-    All fields are optional to allow partial updates.
-    """
+    """Fields that can be updated (all optional)."""
     name: Optional[str] = None
     description: Optional[str] = None
     amount: Optional[int] = None
     deadline: Optional[date] = None
     requirements: Optional[str] = None
 
+    # NEW optional flags for partial updates
+    requires_essay: Optional[bool] = None
+    requires_transcript: Optional[bool] = None
+    requires_questions: Optional[bool] = None
+
 
 class ScholarshipRead(ScholarshipBase):
-    """Schema returned to the frontend."""
     id: int
 
     class Config:
-        # Pydantic v2 version of orm_mode = True
-        from_attributes = True
+        orm_mode = True
