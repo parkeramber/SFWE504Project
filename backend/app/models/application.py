@@ -17,23 +17,24 @@ from app.database import Base
 class Application(Base):
     __tablename__ = "applications"
 
+    # Primary key
     id = Column(Integer, primary_key=True, index=True)
 
-    # who applied
-    user_id = Column(Integer, nullable=False)
-    # you *can* make this a real FK if you want:
-    # user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Who applied (FK to users)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    # which scholarship
-    scholarship_id = Column(Integer, nullable=False)
-    # or: scholarship_id = Column(Integer, ForeignKey("scholarships.id"), nullable=False)
+    # Which scholarship (FK to scholarships)
+    scholarship_id = Column(Integer, ForeignKey("scholarships.id"), nullable=False)
 
     # OPTIONAL FIELDS – only used if scholarship requires them
     essay_text = Column(Text, nullable=True)
     transcript_url = Column(String, nullable=True)
     answers_json = Column(Text, nullable=True)  # e.g. JSON with answers
 
-    # simple status
+    # Which reviewer is assigned (can be null if not assigned yet)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Simple status
     status = Column(String, nullable=False, default="submitted")
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

@@ -15,24 +15,30 @@ class ApplicationBase(BaseModel):
     answers_json: Optional[str] = None  # e.g., JSON string of Q&A
 
 
-class ApplicationCreate(ApplicationBase):
-    """
-    Data the frontend sends when creating an application.
-    For now your frontend is just sending:
-      { user_id, scholarship_id }
-    which is fine because everything else is optional.
-    """
-    pass
+class ApplicationCreate(BaseModel):
+    user_id: int
+    scholarship_id: int
+    essay_text: Optional[str] = None
+    transcript_url: Optional[str] = None
+    answers_json: Optional[str] = None
+    # NEW
+    reviewer_id: Optional[int] = None
 
 
-class ApplicationRead(ApplicationBase):
-    """
-    Data you send back to the client when reading an application.
-    """
+class ApplicationRead(BaseModel):
     id: int
+    user_id: int
+    scholarship_id: int
+    essay_text: Optional[str] = None
+    transcript_url: Optional[str] = None
+    answers_json: Optional[str] = None
     status: str
     created_at: datetime
-    updated_at: datetime
+    # NEW
+    reviewer_id: Optional[int] = None
 
     class Config:
         orm_mode = True
+
+class ApplicationAssign(BaseModel):
+    reviewer_id: int

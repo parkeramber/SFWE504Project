@@ -13,8 +13,10 @@ import {
 import {
   createApplication,
   listApplicationsForUser,
+  listAllApplications,
+  type Application,
+  assignReviewerToApplication,
 } from "../../applications/api";
-
 
 function formatDeadline(deadline: string) {
   const d = new Date(deadline);
@@ -37,6 +39,11 @@ export default function Dashboard() {
   const [activeScholarship, setActiveScholarship] =
     useState<Scholarship | null>(null);
 
+  // Admin: list of all applications
+  const [allApplications, setAllApplications] = useState<Application[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsError, setAppsError] = useState<string | null>(null);
+
   // Track scholarships applied to (frontend only)
   const [appliedIds, setAppliedIds] = useState<number[]>([]);
 
@@ -45,6 +52,13 @@ export default function Dashboard() {
   const [transcriptUrl, setTranscriptUrl] = useState("");
   const [answers, setAnswers] = useState("");
   const [submittingApp, setSubmittingApp] = useState(false);
+
+  // For assigning reviewers (admin)
+  const [assigningAppId, setAssigningAppId] = useState<number | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [reviewerInputs, setReviewerInputs] = useState<Record<number, string>>(
+    {},
+  );
 
   // -------- Initial load --------
   useEffect(() => {
@@ -60,18 +74,44 @@ export default function Dashboard() {
 
         setUser(me);
 
-        // load scholarships + their applications at the same time
-        const [schData, appData] = await Promise.all([
-          listScholarships(),
-          listApplicationsForUser(me.id),
-        ]);
-
+        // Always load scholarships
+        const schData = await listScholarships();
         if (!cancelled) {
           setScholarships(schData);
-          // mark already-applied scholarships based on real DB data
-          setAppliedIds(appData.map((app) => app.scholarship_id));
         }
 
+        // If APPLICANT, load their applications to mark applied scholarships
+        if (me.role === "applicant" && !cancelled) {
+          try {
+            const appData = await listApplicationsForUser(me.id);
+            if (!cancelled) {
+              setAppliedIds(appData.map((app) => app.scholarship_id));
+            }
+          } catch (err) {
+            console.error("Error loading user applications", err);
+          }
+        }
+
+        // If ENGR ADMIN, load all applications in the system
+        if (me.role === "engr_admin" && !cancelled) {
+          try {
+            setAppsLoading(true);
+            setAppsError(null);
+            const apps = await listAllApplications();
+            if (!cancelled) {
+              setAllApplications(apps);
+            }
+          } catch (err) {
+            console.error("Error loading applications for admin", err);
+            if (!cancelled) {
+              setAppsError("Failed to load applications.");
+            }
+          } finally {
+            if (!cancelled) {
+              setAppsLoading(false);
+            }
+          }
+        }
       } catch (err) {
         console.error("Error loading dashboard", err);
         if (!cancelled) {
@@ -196,6 +236,33 @@ export default function Dashboard() {
       setSubmittingApp(false);
     }
   };
+
+  // -------- Assign reviewer (admin) --------
+  async function handleAssignReviewer(appId: number) {
+    const raw = reviewerInputs[appId];
+    const reviewerId = Number(raw);
+
+    if (!raw || Number.isNaN(reviewerId)) {
+      setAssignError("Enter a valid numeric reviewer ID.");
+      return;
+    }
+
+    try {
+      setAssignError(null);
+      setAssigningAppId(appId);
+
+      const updated = await assignReviewerToApplication(appId, reviewerId);
+
+      setAllApplications((prev) =>
+        prev.map((app) => (app.id === appId ? updated : app)),
+      );
+    } catch (err) {
+      console.error("Error assigning reviewer", err);
+      setAssignError("Could not assign reviewer. Please try again.");
+    } finally {
+      setAssigningAppId(null);
+    }
+  }
 
   // -------- Loading / no user --------
   if (loading) {
@@ -478,6 +545,67 @@ export default function Dashboard() {
                     <span>{sch.name}</span>
                     <span>Deadline: {formatDeadline(sch.deadline)}</span>
                     <span>${sch.amount}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* NEW: Admin view – all applications */}
+            <h4 className="dashboard-section-subtitle">All Applications</h4>
+
+            {appsLoading && <p>Loading applications…</p>}
+            {appsError && <p className="dashboard-error">{appsError}</p>}
+            {assignError && <p className="dashboard-error">{assignError}</p>}
+
+            {allApplications.length === 0 && !appsLoading ? (
+              <p>No applications submitted yet.</p>
+            ) : (
+              <ul className="dashboard-admin-list">
+                {allApplications.map((app) => (
+                  <li key={app.id} className="dashboard-admin-item">
+                    <div className="dashboard-admin-row">
+                      <span>
+                        <strong>Application #{app.id}</strong>
+                      </span>
+                      <span>User ID: {app.user_id}</span>
+                      <span>Scholarship ID: {app.scholarship_id}</span>
+                      <span>Status: {app.status}</span>
+                      <span>
+                        Reviewer:{" "}
+                        {app.reviewer_id
+                          ? `User ${app.reviewer_id}`
+                          : "Unassigned"}
+                      </span>
+                    </div>
+
+                    {/* Small inline form to assign a reviewer */}
+                    <div className="dashboard-admin-row">
+                      <label>
+                        Reviewer ID:&nbsp;
+                        <input
+                          type="number"
+                          className="dashboard-input small"
+                          placeholder="e.g. 3"
+                          value={reviewerInputs[app.id] ?? ""}
+                          onChange={(e) =>
+                            setReviewerInputs((prev) => ({
+                              ...prev,
+                              [app.id]: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="dashboard-button small"
+                        onClick={() => handleAssignReviewer(app.id)}
+                        disabled={assigningAppId === app.id}
+                      >
+                        {assigningAppId === app.id
+                          ? "Assigning…"
+                          : "Assign Reviewer"}
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

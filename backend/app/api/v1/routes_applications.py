@@ -11,6 +11,9 @@ from app.services import (
     create_application,
     list_applications_for_user,
     get_application,
+    assign_reviewer,
+    list_applications_for_reviewer,
+    list_all_applications, 
  
 )
 
@@ -62,3 +65,54 @@ def get_application_endpoint(
             detail="Application not found",
         )
     return app_obj
+
+@router.get("/", response_model=List[ApplicationRead])
+def list_all_applications_endpoint(
+    db: Session = Depends(get_db),
+):
+    """
+    List all applications in the system.
+    (In a full system, this would be restricted to ENGR Admins.)
+    """
+    apps = list_all_applications(db)
+    return apps
+
+
+@router.post("/{application_id}/assign-reviewer/{reviewer_id}", response_model=ApplicationRead)
+def assign_reviewer_endpoint(
+    application_id: int,
+    reviewer_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Assign a reviewer to an application.
+    (In a full system, this would be restricted to ENGR Admins.)
+    """
+    try:
+        app_obj = assign_reviewer(db, application_id, reviewer_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    if not app_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application not found",
+        )
+
+    return app_obj
+
+@router.get("/assigned/{reviewer_id}", response_model=List[ApplicationRead])
+def list_assigned_applications_for_reviewer_endpoint(
+    reviewer_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    List all applications assigned to a specific reviewer.
+    """
+    apps = list_applications_for_reviewer(db, reviewer_id)
+    return apps
+
+
