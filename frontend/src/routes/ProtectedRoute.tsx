@@ -1,9 +1,10 @@
-import { ReactElement } from "react";
+// frontend/src/routes/ProtectedRoute.tsx
+import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { loadTokens } from "../auth/session";
 
 type Props = {
-  children: ReactElement;
+  children: ReactNode;
 };
 
 export default function ProtectedRoute({ children }: Props) {
@@ -11,8 +12,8 @@ export default function ProtectedRoute({ children }: Props) {
   const tokens = loadTokens();
 
   if (!tokens) {
-    return <Navigate to="/auth" replace state={{ from: location }} />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  return children;
+  return <>{children}</>;
 }
