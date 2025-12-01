@@ -98,6 +98,17 @@ export default function Dashboard() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
 
+  const inReviewByScholarship = assignedApps.reduce<Record<number, Application[]>>(
+    (acc, app) => {
+      if (app.status === "in_review") {
+        acc[app.scholarship_id] = acc[app.scholarship_id] || [];
+        acc[app.scholarship_id].push(app);
+      }
+      return acc;
+    },
+    {},
+  );
+
   // -------- Initial load --------
   useEffect(() => {
     let cancelled = false;
@@ -310,8 +321,11 @@ export default function Dashboard() {
 
       const updatedApp = await updateApplicationStatus(appId, draft.status);
 
+      // Drop from active list if finalized; otherwise update in place
       setAssignedApps((prev) =>
-        prev.map((app) => (app.id === appId ? updatedApp : app)),
+        draft.status === "accepted" || draft.status === "rejected"
+          ? prev.filter((app) => app.id !== appId)
+          : prev.map((app) => (app.id === appId ? updatedApp : app)),
       );
 
       setMyReviews((prev) => {
@@ -915,6 +929,46 @@ export default function Dashboard() {
                 );
               })}
             </ul>
+          )}
+
+          {Object.keys(inReviewByScholarship).length > 0 && (
+            <div className="dashboard-section">
+              <h4 className="dashboard-section-subtitle">
+                In Review by Scholarship
+              </h4>
+              <div className="reviewer-compare-grid">
+                {Object.entries(inReviewByScholarship).map(
+                  ([schId, appsForSch]) => {
+                    const scholarship = scholarships.find(
+                      (s) => s.id === Number(schId),
+                    );
+                    return (
+                      <div key={schId} className="reviewer-compare-card">
+                        <div className="reviewer-compare-header">
+                          <strong>
+                            {scholarship ? scholarship.name : `Scholarship ${schId}`}
+                          </strong>
+                          <span className="badge badge--muted">
+                            {appsForSch.length} in progress
+                          </span>
+                        </div>
+                        <div className="reviewer-compare-body">
+                          {appsForSch.map((app) => (
+                            <div key={app.id} className="reviewer-compare-row">
+                              <span className="reviewer-compare-label">
+                                App #{app.id}
+                              </span>
+                              <span>Applicant: {app.user_id}</span>
+                              <span>Status: {formatStatus(app.status)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            </div>
           )}
         </section>
       )}

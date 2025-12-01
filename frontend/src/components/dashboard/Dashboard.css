@@ -434,27 +434,51 @@
   font-size: 0.9rem;
   border: none;
   cursor: pointer;
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+  transition: background-color 0.12s ease, color 0.12s ease, opacity 0.12s ease,
+    filter 0.12s ease, box-shadow 0.12s ease;
 }
 
 .dashboard-button.primary {
-  background: #111827;
+  background: #0f172a;
   color: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
 }
 
 .dashboard-button.primary:disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: default;
+  box-shadow: none;
 }
 
 .dashboard-button.secondary {
-  background: #e5e7eb;
-  color: #111827;
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+}
+
+.dashboard-button.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
 }
 
 /* Already used small variant for the list Apply button */
 .dashboard-button.small {
   padding: 0.4rem 0.9rem;
   font-size: 0.85rem;
+}
+
+.dashboard-button:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.dashboard-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
 }
 
 /* Reviewer cards */
@@ -529,15 +553,15 @@
   gap: 0.3rem;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background-color: #111827;
+  background-color: #315ec0ff;
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 600;
 }
 
 .badge--muted {
-  background-color: #e5e7eb;
-  color: #111827;
+  background-color: #75777bff;
+  color: #1f2937;
 }
 
 .reviewer-card-list {
@@ -573,4 +597,47 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.reviewer-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.reviewer-compare-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  padding: 0.8rem 0.9rem;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.reviewer-compare-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.reviewer-compare-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.reviewer-compare-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.6rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.reviewer-compare-label {
+  font-weight: 600;
 }
