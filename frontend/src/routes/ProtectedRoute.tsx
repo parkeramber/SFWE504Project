@@ -10,9 +10,21 @@ type Props = {
 export default function ProtectedRoute({ children }: Props) {
   const location = useLocation();
   const tokens = loadTokens();
+  const isOnboarding = location.pathname === "/applicant/onboarding";
+  const needsProfile = Boolean(tokens?.needsProfileSetup);
 
   if (!tokens) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (needsProfile && !isOnboarding) {
+    return (
+      <Navigate
+        to="/applicant/onboarding"
+        replace
+        state={{ from: location }}
+      />
+    );
   }
 
   return <>{children}</>;

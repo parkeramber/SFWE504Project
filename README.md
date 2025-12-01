@@ -29,6 +29,13 @@ Scholarship management system using **FastAPI (backend)** and **React + Vite (fr
    ACCESS_TOKEN_EXPIRE_MINUTES=30
    REFRESH_TOKEN_EXPIRE_DAYS=7
    DATABASE_URL=sqlite:///./eduaid.db
+   # Email notifications (SMTP)
+   SMTP_HOST=smtp.example.com
+   SMTP_PORT=587
+   SMTP_USERNAME=your-smtp-username
+   SMTP_PASSWORD=your-smtp-password
+   SMTP_USE_TLS=true
+   EMAIL_SENDER=notifications@example.com
    ```
 
 4. Run the API:

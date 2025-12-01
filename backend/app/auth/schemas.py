@@ -48,6 +48,12 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
 
 
+class UserAdminUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+
 class PasswordChange(BaseModel):
     current_password: str = Field(min_length=8, max_length=20)
     new_password: str = Field(min_length=8, max_length=20)
@@ -67,6 +73,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    needs_profile_setup: Optional[bool] = None
 
 
 class TokenPayload(BaseModel):
@@ -74,3 +81,7 @@ class TokenPayload(BaseModel):
     role: UserRole
     token_type: str
     exp: int
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
