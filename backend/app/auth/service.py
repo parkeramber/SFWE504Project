@@ -28,8 +28,8 @@ def create_user(db: Session, user_in: UserCreate) -> User:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
-    # Reviewers and ENGR Admins require approval; others are active on signup.
-    auto_active = user_in.role not in {UserRole.REVIEWER, UserRole.ENGR_ADMIN}
+    # All roles active on signup; adjust here if you want approval gating.
+    auto_active = True
     user = User(
         email=email_normalized,
         first_name=user_in.first_name,

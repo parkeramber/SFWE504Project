@@ -16,12 +16,29 @@ import {
   listAllApplications,
   type Application,
   assignReviewerToApplication,
+  listApplicationsAssignedToReviewer,
+  submitReview,
+  updateApplicationStatus,
+  listReviewsByReviewer,
+  type Review,
 } from "../../applications/api";
+import type { ReviewInput } from "../../applications/api";
 
 function formatDeadline(deadline: string) {
   const d = new Date(deadline);
   if (Number.isNaN(d.getTime())) return deadline;
   return d.toLocaleDateString();
+}
+
+function formatStatus(status?: string) {
+  if (!status) return "Unknown";
+  const map: Record<string, string> = {
+    in_review: "In Review",
+    accepted: "Accepted",
+    rejected: "Rejected",
+    submitted: "Submitted",
+  };
+  return map[status] || status.replaceAll("_", " ");
 }
 
 export default function Dashboard() {
@@ -46,6 +63,7 @@ export default function Dashboard() {
 
   // Track scholarships applied to (frontend only)
   const [appliedIds, setAppliedIds] = useState<number[]>([]);
+  const [userApplications, setUserApplications] = useState<Application[]>([]);
 
   // Form fields
   const [essayText, setEssayText] = useState("");
@@ -57,6 +75,37 @@ export default function Dashboard() {
   const [assigningAppId, setAssigningAppId] = useState<number | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [reviewerInputs, setReviewerInputs] = useState<Record<number, string>>(
+    {},
+  );
+
+  // Reviewer: applications assigned to this reviewer
+  const [assignedApps, setAssignedApps] = useState<Application[]>([]);
+  const [assignedLoading, setAssignedLoading] = useState(false);
+  const [assignedError, setAssignedError] = useState<string | null>(null);
+  const [reviewDrafts, setReviewDrafts] = useState<
+    Record<
+      number,
+      {
+        score: string;
+        comment: string;
+        status: "in_review" | "accepted" | "rejected";
+      }
+    >
+  >({});
+  const [reviewSaving, setReviewSaving] = useState<Record<number, boolean>>({});
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
+  const [myReviews, setMyReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+
+  const inReviewByScholarship = assignedApps.reduce<Record<number, Application[]>>(
+    (acc, app) => {
+      if (app.status === "in_review") {
+        acc[app.scholarship_id] = acc[app.scholarship_id] || [];
+        acc[app.scholarship_id].push(app);
+      }
+      return acc;
+    },
     {},
   );
 
@@ -86,6 +135,7 @@ export default function Dashboard() {
             const appData = await listApplicationsForUser(me.id);
             if (!cancelled) {
               setAppliedIds(appData.map((app) => app.scholarship_id));
+              setUserApplications(appData);
             }
           } catch (err) {
             console.error("Error loading user applications", err);
@@ -109,6 +159,70 @@ export default function Dashboard() {
           } finally {
             if (!cancelled) {
               setAppsLoading(false);
+            }
+          }
+        }
+
+        // If REVIEWER, load assigned applications and existing reviews
+        if (me.role === "reviewer" && !cancelled) {
+          try {
+            setAssignedLoading(true);
+            setAssignedError(null);
+            setReviewsLoading(true);
+            setReviewsError(null);
+
+            const [apps, reviews] = await Promise.all([
+              listApplicationsAssignedToReviewer(me.id),
+              listReviewsByReviewer(me.id),
+            ]);
+            if (!cancelled) {
+              setAssignedApps(apps);
+              setMyReviews(reviews);
+              setReviewDrafts(
+                apps.reduce((acc, app) => {
+                  const existing = reviews.find(
+                    (r) => r.application_id === app.id,
+                  );
+                  return {
+                    ...acc,
+                    [app.id]: {
+                      score:
+                        existing && typeof existing.score === "number"
+                          ? String(existing.score)
+                          : "",
+                      comment: existing?.comment ?? "",
+                      status:
+                        (existing?.status as
+                          | "in_review"
+                          | "accepted"
+                          | "rejected") ||
+                        (app.status as
+                          | "in_review"
+                          | "accepted"
+                          | "rejected") ||
+                        "in_review",
+                    },
+                  };
+                }, {} as Record<
+                  number,
+                  {
+                    score: string;
+                    comment: string;
+                    status: "in_review" | "accepted" | "rejected";
+                  }
+                >),
+              );
+            }
+          } catch (err) {
+            console.error("Error loading reviewer applications", err);
+            if (!cancelled) {
+              setAssignedError("Failed to load assigned applications.");
+              setReviewsError("Failed to load your reviews.");
+            }
+          } finally {
+            if (!cancelled) {
+              setAssignedLoading(false);
+              setReviewsLoading(false);
             }
           }
         }
@@ -185,6 +299,64 @@ export default function Dashboard() {
     );
   }
 
+  async function handleSubmitReview(appId: number) {
+    if (!user) return;
+
+    const draft = reviewDrafts[appId];
+    if (!draft) return;
+
+    try {
+      setReviewSaving((prev) => ({ ...prev, [appId]: true }));
+      setReviewMessage(null);
+
+      const scoreValue =
+        draft.score.trim() === "" ? undefined : Number(draft.score);
+
+      const review = await submitReview(appId, {
+        reviewer_id: user.id,
+        score: Number.isNaN(scoreValue) ? undefined : scoreValue,
+        comment: draft.comment || undefined,
+        status: draft.status,
+      } satisfies ReviewInput);
+
+      const updatedApp = await updateApplicationStatus(appId, draft.status);
+
+      // Drop from active list if finalized; otherwise update in place
+      setAssignedApps((prev) =>
+        draft.status === "accepted" || draft.status === "rejected"
+          ? prev.filter((app) => app.id !== appId)
+          : prev.map((app) => (app.id === appId ? updatedApp : app)),
+      );
+
+      setMyReviews((prev) => {
+        const idx = prev.findIndex(
+          (r) => r.application_id === appId && r.reviewer_id === user.id,
+        );
+        if (idx === -1) {
+          return [...prev, review];
+        }
+        const clone = [...prev];
+        clone[idx] = review;
+        return clone;
+      });
+
+      setReviewMessage("Review saved.");
+
+      // Refresh admin list so statuses stay in sync for admin view
+      try {
+        const refreshed = await listAllApplications();
+        setAllApplications(refreshed);
+      } catch (err) {
+        console.error("Error refreshing applications after review", err);
+      }
+    } catch (err) {
+      console.error("Error saving review", err);
+      setReviewMessage("Could not save review. Please try again.");
+    } finally {
+      setReviewSaving((prev) => ({ ...prev, [appId]: false }));
+    }
+  }
+
   // -------- Apply flow --------
   const handleApply = (scholarship: Scholarship) => {
     if (!user) return;
@@ -206,7 +378,7 @@ export default function Dashboard() {
     setApplyError(null);
 
     try {
-      await createApplication({
+      const newApp = await createApplication({
         user_id: user.id,
         scholarship_id: activeScholarship.id,
         essay_text: activeScholarship.requires_essay ? essayText || null : null,
@@ -225,6 +397,7 @@ export default function Dashboard() {
           ? prev
           : [...prev, activeScholarship.id],
       );
+      setUserApplications((prev) => [...prev, newApp]);
 
       setApplyStatus(`Application submitted for "${activeScholarship.name}".`);
       setActiveScholarship(null); // close the form
@@ -368,13 +541,21 @@ export default function Dashboard() {
                 These are the scholarships you’ve applied to in this session.
               </p>
               <ul className="dashboard-admin-list">
-                {appliedScholarships.map((sch) => (
-                  <li key={sch.id} className="dashboard-admin-item">
-                    <span>{sch.name}</span>
-                    <span>Deadline: {formatDeadline(sch.deadline)}</span>
-                    <span>${sch.amount}</span>
-                  </li>
-                ))}
+                {appliedScholarships.map((sch) => {
+                  const app = userApplications.find(
+                    (a) => a.scholarship_id === sch.id,
+                  );
+                  return (
+                    <li key={sch.id} className="dashboard-admin-item">
+                      <span>{sch.name}</span>
+                      <span>Deadline: {formatDeadline(sch.deadline)}</span>
+                      <span>
+                        Status: {app?.status === "accepted" ? "Approved" : "Submitted"}
+                      </span>
+                      <span>${sch.amount}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}
@@ -559,13 +740,11 @@ export default function Dashboard() {
               <ul className="dashboard-admin-list">
                 {allApplications.map((app) => (
                   <li key={app.id} className="dashboard-admin-item">
-                    <div className="dashboard-admin-row">
-                      <span>
-                        <strong>Application #{app.id}</strong>
-                      </span>
-                      <span>User ID: {app.user_id}</span>
-                      <span>Scholarship ID: {app.scholarship_id}</span>
-                      <span>Status: {app.status}</span>
+                    <div className="dashboard-admin-meta">
+                      <strong>Application #{app.id}</strong>
+                      <span>User: {app.user_id}</span>
+                      <span>Scholarship: {app.scholarship_id}</span>
+                      <span>Status: {formatStatus(app.status)}</span>
                       <span>
                         Reviewer:{" "}
                         {app.reviewer_id
@@ -574,8 +753,7 @@ export default function Dashboard() {
                       </span>
                     </div>
 
-                    {/* Small inline form to assign a reviewer */}
-                    <div className="dashboard-admin-row">
+                    <div className="dashboard-admin-actions-row">
                       <label>
                         Reviewer ID:&nbsp;
                         <input
@@ -616,9 +794,251 @@ export default function Dashboard() {
         <section className="dashboard-section">
           <h3 className="dashboard-section-title">Reviewer Panel</h3>
           <p className="dashboard-text">
-            Assigned applications will appear here in a future update.
+            View and work through the applications assigned to you.
           </p>
-          {renderSearchBar()}
+
+          {assignedError && <p className="dashboard-error">{assignedError}</p>}
+          {reviewMessage && <p className="dashboard-success">{reviewMessage}</p>}
+          {assignedLoading && <p>Loading assigned applications…</p>}
+          {reviewsError && <p className="dashboard-error">{reviewsError}</p>}
+
+          {!assignedLoading && assignedApps.length === 0 && (
+            <p>No applications have been assigned to you yet.</p>
+          )}
+
+          {assignedApps.length > 0 && (
+            <ul className="dashboard-admin-list">
+              {assignedApps.map((app) => {
+                const scholarship = scholarships.find(
+                  (sch) => sch.id === app.scholarship_id,
+                );
+                const draft = reviewDrafts[app.id];
+                return (
+                  <li key={app.id} className="reviewer-card">
+                    <div className="reviewer-card__meta">
+                      <div>
+                        <div className="reviewer-card__title">
+                          Application #{app.id}
+                        </div>
+                        <div className="reviewer-card__sub">
+                          Applicant ID: {app.user_id}
+                        </div>
+                      </div>
+                      <div className="reviewer-card__chips">
+                        <span className="badge">
+                          {scholarship ? scholarship.name : `Scholarship ${app.scholarship_id}`}
+                        </span>
+                        <span className="badge badge--muted">Status: {app.status}</span>
+                        <span className="badge badge--muted">
+                          Essay: {app.essay_text ? "Submitted" : "N/A"}
+                        </span>
+                        <span className="badge badge--muted">
+                          Transcript: {app.transcript_url ? "Provided" : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="reviewer-card__form">
+                      <label>
+                        <span className="label-text">Score (0-100)</span>
+                        <input
+                          type="number"
+                          className="dashboard-input small"
+                          min={0}
+                          max={100}
+                          value={draft?.score ?? ""}
+                          onChange={(e) =>
+                            setReviewDrafts((prev) => ({
+                              ...prev,
+                              [app.id]: {
+                                ...(prev[app.id] ?? {
+                                  score: "",
+                                  comment: "",
+                                  status: "in_review",
+                                }),
+                                score: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </label>
+
+                      <label className="reviewer-card__comment">
+                        <span className="label-text">Comment</span>
+                        <textarea
+                          className="dashboard-textarea"
+                          placeholder="Enter review notes or justification"
+                          value={draft?.comment ?? ""}
+                          onChange={(e) =>
+                            setReviewDrafts((prev) => ({
+                              ...prev,
+                              [app.id]: {
+                                ...(prev[app.id] ?? {
+                                  score: "",
+                                  comment: "",
+                                  status: "in_review",
+                                }),
+                                comment: e.target.value,
+                              },
+                            }))
+                          }
+                          rows={3}
+                        />
+                      </label>
+
+                      <label>
+                        <span className="label-text">Decision</span>
+                        <select
+                          className="dashboard-input"
+                          value={draft?.status ?? "in_review"}
+                          onChange={(e) =>
+                            setReviewDrafts((prev) => ({
+                              ...prev,
+                              [app.id]: {
+                                ...(prev[app.id] ?? {
+                                  score: "",
+                                  comment: "",
+                                  status: "in_review",
+                                }),
+                                status: e.target.value as
+                                  | "in_review"
+                                  | "accepted"
+                                  | "rejected",
+                              },
+                            }))
+                          }
+                        >
+                          <option value="in_review">In Review</option>
+                          <option value="accepted">Accepted</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </label>
+
+                      <div className="reviewer-card__actions">
+                        <button
+                          type="button"
+                          className="dashboard-button small"
+                          onClick={() => handleSubmitReview(app.id)}
+                          disabled={reviewSaving[app.id]}
+                        >
+                          {reviewSaving[app.id] ? "Saving…" : "Save review"}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {Object.keys(inReviewByScholarship).length > 0 && (
+            <div className="dashboard-section">
+              <h4 className="dashboard-section-subtitle">
+                In Review by Scholarship
+              </h4>
+              <div className="reviewer-compare-grid">
+                {Object.entries(inReviewByScholarship).map(
+                  ([schId, appsForSch]) => {
+                    const scholarship = scholarships.find(
+                      (s) => s.id === Number(schId),
+                    );
+                    return (
+                      <div key={schId} className="reviewer-compare-card">
+                        <div className="reviewer-compare-header">
+                          <strong>
+                            {scholarship ? scholarship.name : `Scholarship ${schId}`}
+                          </strong>
+                          <span className="badge badge--muted">
+                            {appsForSch.length} in progress
+                          </span>
+                        </div>
+                        <div className="reviewer-compare-body">
+                          {appsForSch.map((app) => (
+                            <div key={app.id} className="reviewer-compare-row">
+                              <span className="reviewer-compare-label">
+                                App #{app.id}
+                              </span>
+                              <span>Applicant: {app.user_id}</span>
+                              <span>Status: {formatStatus(app.status)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {user.role === "reviewer" && (
+        <section className="dashboard-section">
+          <h3 className="dashboard-section-title">My Submitted Reviews</h3>
+          <p className="dashboard-text">
+            Quick view of what you’ve already reviewed. Click edit to adjust.
+          </p>
+          {reviewsLoading && <p>Loading your reviews…</p>}
+          {reviewsError && <p className="dashboard-error">{reviewsError}</p>}
+          {!reviewsLoading && myReviews.length === 0 && (
+            <p>You haven’t submitted any reviews yet.</p>
+          )}
+          {myReviews.length > 0 && (
+            <ul className="reviewer-card-list">
+              {myReviews.map((review) => {
+                const app = assignedApps.find(
+                  (a) => a.id === review.application_id,
+                );
+                const scholarship = scholarships.find(
+                  (sch) => sch.id === app?.scholarship_id,
+                );
+                return (
+                  <li key={review.id} className="reviewer-history">
+                    <div>
+                      <div className="reviewer-history__title">
+                        App #{review.application_id} ·{" "}
+                        {scholarship
+                          ? scholarship.name
+                          : app?.scholarship_id ?? "Scholarship"}
+                      </div>
+                      <div className="reviewer-history__meta">
+                        Score: {review.score ?? "—"} | Status: {review.status}
+                      </div>
+                    </div>
+                    <div className="reviewer-history__actions">
+                      <button
+                        type="button"
+                        className="dashboard-button small"
+                        onClick={() => {
+                          setReviewDrafts((prev) => ({
+                            ...prev,
+                            [review.application_id]: {
+                              score:
+                                typeof review.score === "number"
+                                  ? String(review.score)
+                                  : "",
+                              comment: review.comment ?? "",
+                              status:
+                                (review.status as
+                                  | "in_review"
+                                  | "accepted"
+                                  | "rejected") || "in_review",
+                            },
+                          }));
+                          setReviewMessage(
+                            `Loaded review for application #${review.application_id}. Edit above and save.`,
+                          );
+                        }}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
       )}
 

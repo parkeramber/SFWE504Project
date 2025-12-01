@@ -5,8 +5,10 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.application import Application
+from app.models.review import Review
 from app.models.user import User
 from app.schemas.application import ApplicationCreate, ApplicationRead
+from app.schemas.review import ReviewCreate, ReviewRead
 
 
 def create_application(
@@ -80,7 +82,7 @@ def list_applications_for_reviewer(db: Session, reviewer_id: int) -> List[Applic
     """
     return (
         db.query(Application)
-        .filter(Application.assigned_reviewer_id == reviewer_id)
+        .filter(Application.reviewer_id == reviewer_id)
         .order_by(Application.created_at.desc())
         .all()
     )
@@ -94,3 +96,76 @@ def list_all_applications(db: Session) -> List[Application]:
         .order_by(Application.created_at.desc())
         .all()
     )
+
+
+# ---------- Reviews ----------
+
+def upsert_review(
+    db: Session,
+    application_id: int,
+    payload: ReviewCreate,
+) -> Review:
+    """
+    Create or update a review for an application by a specific reviewer.
+    """
+    review = (
+        db.query(Review)
+        .filter(
+            Review.application_id == application_id,
+            Review.reviewer_id == payload.reviewer_id,
+        )
+        .first()
+    )
+
+    if not review:
+        review = Review(
+          application_id=application_id,
+          reviewer_id=payload.reviewer_id,
+        )
+        db.add(review)
+
+    review.score = payload.score
+    review.comment = payload.comment
+    review.status = payload.status
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+def list_reviews_for_application(db: Session, application_id: int) -> List[Review]:
+    return (
+        db.query(Review)
+        .filter(Review.application_id == application_id)
+        .order_by(Review.created_at.desc())
+        .all()
+    )
+
+
+def list_reviews_for_reviewer(db: Session, reviewer_id: int) -> List[Review]:
+    return (
+        db.query(Review)
+        .filter(Review.reviewer_id == reviewer_id)
+        .order_by(Review.created_at.desc())
+        .all()
+    )
+
+
+def update_application_status(
+    db: Session,
+    application_id: int,
+    status: str,
+) -> Optional[Application]:
+    """
+    Update an application's status (e.g., in_review -> accepted/rejected).
+    """
+    app_obj = (
+        db.query(Application)
+        .filter(Application.id == application_id)
+        .first()
+    )
+    if not app_obj:
+        return None
+    app_obj.status = status
+    db.commit()
+    db.refresh(app_obj)
+    return app_obj
