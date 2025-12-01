@@ -25,6 +25,7 @@ export type UserRegisterInput = {
 export type Tokens = {
   accessToken: string;
   refreshToken: string;
+  needsProfileSetup?: boolean;
 };
 
 export type UserUpdateInput = {

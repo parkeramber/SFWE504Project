@@ -6,6 +6,7 @@ import { clearTokens, loadTokens, saveTokens } from "./session";
 import type { Tokens, User, UserRole } from "./types";
 import Notification from "../components/Notification";
 import "../App.css";
+import { requestPasswordReset } from "./api";
 
 type Mode = "login" | "register";
 
@@ -81,10 +82,11 @@ export default function AuthPage({ defaultMode = "login" }: Props) {
     }
   }, []);
 
-  const hydrateUser = async (tokenPair: Tokens) => {
+  const hydrateUser = async (tokenPair: Tokens): Promise<User | null> => {
     try {
       const me = await fetchMe(tokenPair.accessToken);
       setUser(me);
+      return me;
     } catch {
       try {
         const refreshed = await refreshSession(tokenPair.refreshToken);
@@ -92,9 +94,26 @@ export default function AuthPage({ defaultMode = "login" }: Props) {
         saveTokens(refreshed);
         const me = await fetchMe(refreshed.accessToken);
         setUser(me);
+        return me;
       } catch {
         clearAuth();
+        return null;
       }
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setMessage(null);
+    if (!email) {
+      setError("Enter your email to reset your password.");
+      return;
+    }
+    try {
+      await requestPasswordReset(email);
+      setMessage("If that account exists, a reset email has been sent.");
+    } catch (err: any) {
+      setError(extractError(err, "Could not send reset email."));
     }
   };
 
@@ -112,9 +131,13 @@ export default function AuthPage({ defaultMode = "login" }: Props) {
       const newTokens = await loginUser({ email, password });
       setTokens(newTokens);
       saveTokens(newTokens);
-      await hydrateUser(newTokens);
+      const me = await hydrateUser(newTokens);
       setMessage("Logged in");
-      navigate("/dashboard", { replace: true });
+      if (me?.role === "applicant" && newTokens.needsProfileSetup) {
+        navigate("/applicant/onboarding", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err: any) {
       setError(extractError(err, "Login failed"));
     } finally {
@@ -295,6 +318,15 @@ export default function AuthPage({ defaultMode = "login" }: Props) {
             <button type="submit" disabled={loading}>
               {loading ? "Working..." : mode === "login" ? "Login" : "Create account"}
             </button>
+            {mode === "login" && (
+              <button
+                type="button"
+                className="link-button"
+                onClick={handleForgotPassword}
+              >
+                Forgot password?
+              </button>
+            )}
           </form>
         )}
 

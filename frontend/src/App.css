@@ -418,7 +418,7 @@
 }
 
 .profile-card {
-  width: min(720px, 100%);
+  width: min(960px, 100%);
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 18px;
@@ -430,6 +430,20 @@
 
 .profile-card h2 {
   margin: 0;
+}
+
+.admin-users-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-users-subtext {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
 }
 
 .profile-tabs {
@@ -494,6 +508,117 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.25rem;
+}
+
+/* Admin users page */
+.admin-users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-user-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-user-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.admin-user-email {
+  margin-left: 0.35rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.admin-user-badge {
+  background: #f97316;
+  color: #fff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.admin-user-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-user-field {
+  display: grid;
+  gap: 0.35rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.admin-user-field input,
+.admin-user-field select {
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  width: 100%;
+}
+
+.admin-user-field.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-user-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+.dashboard-button.small:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dashboard-button--danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.dashboard-button--secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.dashboard-button.small {
+  border: none;
+  color: #fff;
+}
+
+.dashboard-button.small.approve {
+  background: #22c55e;
+}
+
+.dashboard-button.small.edit {
+  background: #2563eb;
+}
+
+.dashboard-button.small.secondary {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 @media (max-width: 700px) {

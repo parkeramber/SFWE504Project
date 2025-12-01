@@ -29,6 +29,7 @@ export async function loginUser(payload: UserLoginInput): Promise<Tokens> {
   return {
     accessToken: res.data.access_token,
     refreshToken: res.data.refresh_token,
+    needsProfileSetup: Boolean(res.data.needs_profile_setup),
   };
 }
 
@@ -38,6 +39,7 @@ export async function refreshSession(refreshToken: string): Promise<Tokens> {
   return {
     accessToken: res.data.access_token,
     refreshToken: res.data.refresh_token,
+    needsProfileSetup: Boolean(res.data.needs_profile_setup),
   };
 }
 
@@ -88,4 +90,8 @@ export async function changePassword(
       headers: { Authorization: `Bearer ${accessToken}` },
     }
   );
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await api.post("/auth/forgot-password", { email });
 }
