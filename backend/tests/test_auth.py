@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 from app.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import user  # noqa: F401,E402 - ensure models are loaded
+from app.auth.service import authenticate_user  # noqa: E402
 
 
 # Use a shared in-memory SQLite DB for tests
@@ -116,10 +117,72 @@ def test_refresh_token(client):
     login = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
     refresh_token = login.json()["refresh_token"]
 
-    refreshed = client.post("/api/v1/auth/refresh", json={"token": refresh_token})
+    refreshed = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert refreshed.status_code == 200
     data = refreshed.json()
     assert "access_token" in data and "refresh_token" in data
+
+
+def test_needs_profile_flag_for_applicant_without_profile(client):
+    payload = register_payload()
+    client.post("/api/v1/auth/register", json=payload)
+    login = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
+    data = login.json()
+    assert data["needs_profile_setup"] is True
+
+
+def test_reviewer_requires_activation_before_login(client):
+    payload = register_payload(email="reviewer@example.com")
+    payload["role"] = "reviewer"
+    client.post("/api/v1/auth/register", json=payload)
+
+    # Reviewer starts inactive and cannot login
+    login = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
+    assert login.status_code == 403
+
+
+def test_admin_requires_activation_before_login(client):
+    payload = register_payload(email="admin@example.com")
+    payload["role"] = "engr_admin"
+    client.post("/api/v1/auth/register", json=payload)
+
+    login = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
+    assert login.status_code == 403
+
+
+def test_active_reviewer_can_login_after_activation(client):
+    payload = register_payload(email="reviewer2@example.com")
+    payload["role"] = "reviewer"
+    client.post("/api/v1/auth/register", json=payload)
+
+    # Manually activate reviewer in DB
+    db = TestingSessionLocal()
+    user_obj = db.query(user.User).filter_by(email=payload["email"]).first()
+    user_obj.is_active = True
+    db.commit()
+    db.close()
+
+    login = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
+    assert login.status_code == 200
+
+
+def test_revoke_user_blocks_login(client):
+    payload = register_payload(email="revoke@example.com")
+    client.post("/api/v1/auth/register", json=payload)
+
+    # login works initially
+    login = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
+    assert login.status_code == 200
+
+    # deactivate and ensure login blocked
+    db = TestingSessionLocal()
+    user_obj = db.query(user.User).filter_by(email=payload["email"]).first()
+    user_obj.is_active = False
+    db.commit()
+    db.close()
+
+    login2 = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
+    assert login2.status_code == 403
 
 
 def test_me_requires_auth(client):

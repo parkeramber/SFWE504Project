@@ -10,7 +10,7 @@ class ApplicantProfileBase(BaseModel):
     netid: str = Field(..., min_length=2, max_length=50)
     degree_major: str = Field(..., min_length=2, max_length=100)
     degree_minor: Optional[str] = Field(None, max_length=100)
-    gpa: Optional[float] = Field(None, ge=0.0, le=4.0)
+    gpa: float = Field(..., ge=0.0, le=4.0)
     academic_achievements: Optional[str] = None
     financial_information: Optional[str] = None
     written_essays: Optional[str] = None
