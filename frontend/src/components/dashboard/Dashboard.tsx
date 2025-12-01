@@ -10,7 +10,11 @@ import {
   searchScholarships,
   type Scholarship,
 } from "../../scholarships/api";
-import { createApplication } from "../../applications/api";
+import {
+  createApplication,
+  listApplicationsForUser,
+} from "../../applications/api";
+
 
 function formatDeadline(deadline: string) {
   const d = new Date(deadline);
@@ -56,10 +60,18 @@ export default function Dashboard() {
 
         setUser(me);
 
-        const data = await listScholarships();
+        // load scholarships + their applications at the same time
+        const [schData, appData] = await Promise.all([
+          listScholarships(),
+          listApplicationsForUser(me.id),
+        ]);
+
         if (!cancelled) {
-          setScholarships(data);
+          setScholarships(schData);
+          // mark already-applied scholarships based on real DB data
+          setAppliedIds(appData.map((app) => app.scholarship_id));
         }
+
       } catch (err) {
         console.error("Error loading dashboard", err);
         if (!cancelled) {
