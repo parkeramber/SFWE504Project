@@ -4,6 +4,7 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem 1.25rem 2rem;
+  color: var(--brand, #0f172a);
 }
 
 .dashboard-page {
@@ -19,11 +20,11 @@
 .dashboard-card {
   max-width: 960px;
   width: 100%;
-  background-color: #ffffff;
+  background-color: var(--card, #ffffff);
   border-radius: 1rem;
   padding: 1.75rem 2rem;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
-  border: 1px solid #e5e7eb;
+  box-shadow: var(--shadow, 0 18px 45px rgba(15, 23, 42, 0.12));
+  border: 1px solid var(--border, #e5e7eb);
 }
 
 .dashboard-card + .dashboard-card {
@@ -32,9 +33,9 @@
 
 .dashboard-card-inner {
   border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border, #e5e7eb);
   padding: 0.9rem 1.1rem;
-  background-color: #f9fafb;
+  background-color: var(--subtle, #f9fafb);
 }
 
 .dashboard-header {
@@ -71,7 +72,7 @@
 }
 
 .dashboard-text {
-  color: #4b5563;
+  color: var(--muted, #4b5563);
   font-size: 0.95rem;
 }
 
@@ -188,8 +189,8 @@
   align-items: center;
   padding: 0.85rem 1rem;
   border-radius: 0.75rem;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background-color: var(--subtle, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
   font-size: 0.9rem;
   gap: 1rem;
   flex-wrap: wrap;
@@ -323,15 +324,15 @@
   flex: 1;
   padding: 0.55rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border, #d1d5db);
   font-size: 0.9rem;
   outline: none;
   transition: border-color 0.1s ease, box-shadow 0.1s ease;
 }
 
 .dashboard-search-input:focus {
-  border-color: #111827;
-  box-shadow: 0 0 0 1px #11182722;
+  border-color: var(--accent, #111827);
+  box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.16);
 }
 
 .dashboard-search-button {
@@ -434,7 +435,7 @@
   font-size: 0.9rem;
   border: none;
   cursor: pointer;
-  background: #0f172a;
+  background: var(--brand, #0f172a);
   color: #ffffff;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
   transition: background-color 0.12s ease, color 0.12s ease, opacity 0.12s ease,
@@ -582,15 +583,15 @@
   gap: 0.3rem;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background-color: #315ec0ff;
+  background-color: var(--brand, #0f172a);
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 600;
 }
 
 .badge--muted {
-  background-color: #75777bff;
-  color: #1f2937;
+  background-color: var(--subtle, #e5e7eb);
+  color: var(--brand, #1f2937);
 }
 
 .reviewer-card-list {
