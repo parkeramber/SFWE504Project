@@ -1029,10 +1029,11 @@ export default function Dashboard() {
       {user.role === "reviewer" && (
         <section className="dashboard-section" id="reviewer">
           <h3 className="dashboard-section-title">Reviewer Panel</h3>
+          
           <p className="dashboard-text">
             View and work through the applications assigned to you.
           </p>
-
+          
           {assignedError && <p className="dashboard-error">{assignedError}</p>}
           {reviewMessage && <p className="dashboard-success">{reviewMessage}</p>}
           {assignedLoading && <p>Loading assigned applications…</p>}
@@ -1051,6 +1052,7 @@ export default function Dashboard() {
           {!assignedLoading && assignedApps.length === 0 && (
             <p>No applications have been assigned to you yet.</p>
           )}
+          
 
           {assignedApps.length > 0 && (
             <ul className="dashboard-admin-list">
@@ -1237,6 +1239,7 @@ export default function Dashboard() {
               })}
             </ul>
           )}
+          
 
           {Object.keys(inReviewByScholarship).length > 0 && (
             <div className="dashboard-section">
@@ -1277,6 +1280,8 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          
         </section>
       )}
 
@@ -1372,7 +1377,9 @@ export default function Dashboard() {
                   </li>
                 );
               })}
+              
             </ul>
+            
           )}
 
         </section>
@@ -1381,6 +1388,10 @@ export default function Dashboard() {
       {/* SPONSOR / DONOR VIEW */}
       {user.role === "sponsor_donor" && (
         <section className="dashboard-section">
+          <h3 className="dashboard-section-title">Sponsor/Donor Scholarship Request</h3>
+          <Link className="dashboard-chip" to="/admin/scholarships" style={{ marginBottom: "0.5rem" }}>
+                Request Scholarship
+              </Link>
           <h3 className="dashboard-section-title">Sponsor/Donor Portal</h3>
           <p className="dashboard-text">
             Donation history, sponsored scholarships, and student stats will
@@ -1394,10 +1405,22 @@ export default function Dashboard() {
       {user.role === "steward" && (
         <section className="dashboard-section">
           <h3 className="dashboard-section-title">Steward Portal</h3>
-          <p className="dashboard-text">
-            Stewardship responsibilities and workflow will appear here.
-          </p>
-          {renderSearchBar()}
+          <button
+                className="dashboard-chip dashboard-chip--disabled"
+                type="button"
+                disabled
+              >
+                 Annual Reports Generator
+              </button>
+              <button
+                className="dashboard-chip dashboard-chip--disabled"
+                type="button"
+                style={{marginLeft: "0.5rem"}}
+                disabled
+              >
+                Fund Management
+              </button>
+          
         </section>
       )}
     </div>

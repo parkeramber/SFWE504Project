@@ -44,7 +44,7 @@ export default function ScholarshipCreateEditGUI() {
 
         setCurrentUser(me);
 
-        if (me.role !== "engr_admin") {
+        if (me.role !== "engr_admin" && me.role !== "sponsor_donor") {
           setError("You do not have permission to manage scholarships.");
         }
       } catch (e) {
@@ -76,7 +76,7 @@ export default function ScholarshipCreateEditGUI() {
     }
 
     // Guard: must be logged in and engr_admin
-    if (!currentUser || currentUser.role !== "engr_admin") {
+    if (!currentUser || (currentUser.role !== "engr_admin" && currentUser.role !== "sponsor_donor")) {
       setError("You do not have permission to manage scholarships.");
       return;
     }
@@ -130,7 +130,7 @@ export default function ScholarshipCreateEditGUI() {
   }
 
   // If they aren't allowed, show error + back button
-  if (!currentUser || currentUser.role !== "engr_admin") {
+  if (!currentUser || (currentUser.role !== "engr_admin" && currentUser.role !== "sponsor_donor")) {
     return (
       <div className="dashboard">
         <p className="dashboard-error">
@@ -146,7 +146,143 @@ export default function ScholarshipCreateEditGUI() {
       </div>
     );
   }
+  if (currentUser.role === "sponsor_donor")
+  {
+    return (
+      <div className="dashboard">
+        <h2 className="dashboard-title">Manage Scholarships</h2>
+        <p className="dashboard-subtitle">
+          Create a new scholarship opportunity.
+        </p>
 
+        {error && <p className="dashboard-error">{error}</p>}
+        {message && <p className="dashboard-success">{message}</p>}
+
+        <form className="dashboard-form" onSubmit={handleSubmit}>
+          <label className="dashboard-label">
+            Scholarship Name
+            <input
+              className="dashboard-input"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Women in Engineering Scholarship"
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Description
+            <textarea
+              className="dashboard-textarea"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Supports underrepresented students in Engineering."
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Amount (USD)
+            <input
+              className="dashboard-input"
+              type="number"
+              min={0}
+              value={amount}
+              onChange={(e) =>
+                setAmount(e.target.value === "" ? "" : Number(e.target.value))
+              }
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Deadline
+            <input
+              className="dashboard-input"
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Requirements
+            <textarea
+              className="dashboard-textarea"
+              value={requirements}
+              onChange={(e) => setRequirements(e.target.value)}
+              placeholder="Minimum 3.0 GPA, Engineering major…"
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Minimum GPA
+            <input
+              className="dashboard-input"
+              type="number"
+              step="0.01"
+              min={0}
+              max={4}
+              value={minGpa}
+              onChange={(e) =>
+                setMinGpa(e.target.value === "" ? "" : Number(e.target.value))
+              }
+              placeholder="e.g. 3.0"
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Required Citizenship
+            <input
+              className="dashboard-input"
+              type="text"
+              value={requiredCitizenship}
+              onChange={(e) => setRequiredCitizenship(e.target.value)}
+              placeholder="e.g. US Citizen, Permanent Resident"
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Required Major
+            <input
+              className="dashboard-input"
+              type="text"
+              value={requiredMajor}
+              onChange={(e) => setRequiredMajor(e.target.value)}
+              placeholder="e.g. Software Engineering"
+            />
+          </label>
+
+          <label className="dashboard-label">
+            Required Minor (optional)
+            <input
+              className="dashboard-input"
+              type="text"
+              value={requiredMinor}
+              onChange={(e) => setRequiredMinor(e.target.value)}
+              placeholder="e.g. Mathematics"
+            />
+          </label>
+
+          <div className="dashboard-form-actions">
+            <button
+              className="dashboard-button"
+              type="submit"
+              disabled={submitting}
+            >
+              {submitting ? "Saving…" : "Create Scholarship"}
+            </button>
+
+            <button
+              className="dashboard-button secondary"
+              type="button"
+              onClick={() => navigate("/dashboard")}
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
   // Normal form for engr_admin
   return (
     <div className="dashboard">
