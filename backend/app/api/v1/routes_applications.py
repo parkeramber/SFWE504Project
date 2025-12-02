@@ -41,8 +41,14 @@ def create_application_endpoint(
     # - check that user_id / scholarship_id exist
     # - avoid duplicates
 
-    app_obj = create_application(db, payload)
-    return app_obj
+    try:
+        app_obj = create_application(db, payload)
+        return app_obj
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.get("/by-user/{user_id}", response_model=List[ApplicationRead])

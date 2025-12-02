@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class ApplicantProfileBase(BaseModel):
     student_id: str = Field(..., min_length=2, max_length=50)
     netid: str = Field(..., min_length=2, max_length=50)
+    citizenship: Optional[str] = Field(None, max_length=100)
     degree_major: str = Field(..., min_length=2, max_length=100)
     degree_minor: Optional[str] = Field(None, max_length=100)
     gpa: Optional[float] = Field(None, ge=0.0, le=4.0)

@@ -37,6 +37,7 @@ def upsert_applicant_profile(
 
     profile.student_id = payload.student_id
     profile.netid = payload.netid
+    profile.citizenship = payload.citizenship
     profile.degree_major = payload.degree_major
     profile.degree_minor = payload.degree_minor
     profile.gpa = payload.gpa

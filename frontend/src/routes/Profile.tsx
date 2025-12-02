@@ -14,12 +14,14 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [netId, setNetId] = useState("");
+  const [citizenship, setCitizenship] = useState("");
   const [degreeMajor, setDegreeMajor] = useState("");
   const [degreeMinor, setDegreeMinor] = useState("");
   const [gpa, setGpa] = useState("");
   const [academicAchievements, setAcademicAchievements] = useState("");
   const [financialInformation, setFinancialInformation] = useState("");
   const [writtenEssays, setWrittenEssays] = useState("");
+  const [citizenshipConfirmed, setCitizenshipConfirmed] = useState(false);
   const [pwdCurrent, setPwdCurrent] = useState("");
   const [pwdNew, setPwdNew] = useState("");
   const [pwdConfirm, setPwdConfirm] = useState("");
@@ -58,6 +60,7 @@ export default function ProfilePage() {
               const profile = await fetchApplicantProfile(tokens.accessToken);
               setStudentId(profile.student_id);
               setNetId(profile.netid);
+              setCitizenship(profile.citizenship ?? "");
               setDegreeMajor(profile.degree_major);
               setDegreeMinor(profile.degree_minor ?? "");
               setGpa(
@@ -68,6 +71,7 @@ export default function ProfilePage() {
               setAcademicAchievements(profile.academic_achievements ?? "");
               setFinancialInformation(profile.financial_information ?? "");
               setWrittenEssays(profile.written_essays ?? "");
+              setCitizenshipConfirmed(false);
             } catch (err: any) {
               const detail = err?.response?.data?.detail;
               if (detail && detail !== "Applicant profile not found") {
@@ -132,6 +136,16 @@ export default function ProfilePage() {
       return;
     }
 
+    if (!citizenship.trim()) {
+      setAppError("Citizenship is required for eligibility checks.");
+      return;
+    }
+
+    if (!citizenshipConfirmed) {
+      setAppError("Please confirm your citizenship information is accurate.");
+      return;
+    }
+
     const gpaNumber = Number(gpa);
     if (Number.isNaN(gpaNumber) || gpaNumber < 0 || gpaNumber > 4) {
       setAppError("Enter a GPA between 0.00 and 4.00.");
@@ -147,6 +161,7 @@ export default function ProfilePage() {
         last_name: lastName || undefined,
         student_id: studentId,
         netid: netId,
+        citizenship: citizenship || undefined,
         degree_major: degreeMajor,
         degree_minor: degreeMinor || undefined,
         gpa: gpaNumber,
@@ -159,6 +174,7 @@ export default function ProfilePage() {
       saveTokens({ ...tokens, needsProfileSetup: false });
 
       setAppStatus("Applicant information saved");
+      setCitizenshipConfirmed(true);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       setAppError(detail || "Applicant info update failed");
@@ -291,6 +307,25 @@ export default function ProfilePage() {
                 placeholder="NetID"
                 required
               />
+            </label>
+            <label>
+              Citizenship
+              <input
+                type="text"
+                value={citizenship}
+                onChange={(e) => setCitizenship(e.target.value)}
+                placeholder="Citizenship"
+                required
+              />
+            </label>
+            <label className="checkbox-inline">
+              <input
+                type="checkbox"
+                checked={citizenshipConfirmed}
+                onChange={(e) => setCitizenshipConfirmed(e.target.checked)}
+                required
+              />
+              I confirm my citizenship information is accurate.
             </label>
             <label>
               Degree major

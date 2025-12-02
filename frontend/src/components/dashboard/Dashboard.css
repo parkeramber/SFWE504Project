@@ -435,11 +435,11 @@
   font-size: 0.9rem;
   border: none;
   cursor: pointer;
-  background: var(--brand, #0f172a);
+  background: #0f172a;
   color: #ffffff;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
-  transition: background-color 0.12s ease, color 0.12s ease, opacity 0.12s ease,
-    filter 0.12s ease, box-shadow 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease, opacity 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+  font-weight: 700;
 }
 
 .dashboard-button.primary {
@@ -473,12 +473,12 @@
 }
 
 .dashboard-button:hover:not(:disabled) {
-  filter: brightness(1.05);
+  filter: brightness(1.08);
 }
 
 .dashboard-button:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.7;
+  cursor: not-allowed;
   box-shadow: none;
 }
 
