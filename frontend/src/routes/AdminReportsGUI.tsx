@@ -4,31 +4,58 @@ import { useEffect, useState } from "react";
 import { fetchMe } from "../auth/api";
 import { loadTokens, clearTokens } from "../auth/session";
 import type { User } from "../auth/types";
-import { fetchAdminSummary, type AdminSummary } from "../admin/api";
+import {
+  fetchAdminSummary,
+  type AdminSummary,
+  fetchQualifiedByScholarship,
+} from "../admin/api";
+import { listScholarships, type Scholarship } from "../scholarships/api";
 
 export default function AdminReportsGUI() {
   const [user, setUser] = useState<User | null>(null);
   const [summary, setSummary] = useState<AdminSummary | null>(null);
+  const [qualified, setQualified] = useState<Record<number, number>>({});
+  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const tokens = loadTokens();
-    if (!tokens) {
-      setError("No active session.");
-      setLoading(false);
-      return;
-    }
-
     const hydrate = async () => {
       try {
         // 1) Get user
+        const tokens = loadTokens();
+        if (!tokens) {
+          setError("No active session.");
+          setLoading(false);
+          return;
+        }
+
         const me = await fetchMe(tokens.accessToken);
         setUser(me);
 
         // 2) Get admin summary
-        const data = await fetchAdminSummary();
+        const data = await fetchAdminSummary(tokens.accessToken);
         setSummary(data);
+
+        // 3) Load scholarships and qualified counts
+        const schList = await listScholarships();
+        setScholarships(schList);
+
+        const qualifiedCounts: Record<number, number> = {};
+        for (const sch of schList) {
+          try {
+            const res = await fetchQualifiedByScholarship(
+              tokens.accessToken,
+              sch.id,
+            );
+            qualifiedCounts[sch.id] = Array.isArray(res)
+              ? res.filter((r) => r.status === "qualified").length
+              : 0;
+          } catch (err) {
+            console.error("Error loading qualified for scholarship", sch.id, err);
+          }
+        }
+        setQualified(qualifiedCounts);
       } catch (err: any) {
         console.error("Error loading admin reports", err);
         const status = err?.response?.status;
@@ -87,13 +114,45 @@ export default function AdminReportsGUI() {
                   <th>Total applications</th>
                   <td>{summary.total_applications}</td>
                 </tr>
+                <tr>
+                  <th>Total reviewers</th>
+                  <td>{summary.total_reviewers ?? 0}</td>
+                </tr>
+                <tr>
+                  <th>Total admins</th>
+                  <td>{summary.total_admins ?? 0}</td>
+                </tr>
+                <tr>
+                  <th>Total stewards</th>
+                  <td>{summary.total_stewards ?? 0}</td>
+                </tr>
+                <tr>
+                  <th>Total sponsors</th>
+                  <td>{summary.total_sponsors ?? 0}</td>
+                </tr>
               </tbody>
             </table>
 
             <p className="lead-text">
-              Additional reports (demographics, impact) will be added in future
-              iterations.
+              Qualified applicants by scholarship
             </p>
+
+            <table className="reports-table">
+              <thead>
+                <tr>
+                  <th>Scholarship</th>
+                  <th>Qualified Applicants</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scholarships.map((sch) => (
+                  <tr key={sch.id}>
+                    <td>{sch.name}</td>
+                    <td>{qualified[sch.id] ?? 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </>
         )}
       </div>

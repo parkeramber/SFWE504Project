@@ -23,13 +23,23 @@ def admin_summary(
 ):
     total_scholarships = db.query(Scholarship).count()
     total_users = db.query(User).count()
+    total_applications = db.query(Application).count()
+    total_applicants = db.query(User).filter(User.role == UserRole.APPLICANT).count()
+    total_reviewers = db.query(User).filter(User.role == UserRole.REVIEWER).count()
+    total_admins = db.query(User).filter(User.role == UserRole.ENGR_ADMIN).count()
+    total_stewards = db.query(User).filter(User.role == UserRole.STEWARD).count()
+    total_sponsors = db.query(User).filter(User.role == UserRole.SPONSOR_DONOR).count()
 
     # snake_case keys → TS maps them to camelCase
     return {
         "total_users": total_users,
         "total_scholarships": total_scholarships,
-        "total_applicants": 12,        # fake number for now
-        "total_applications": 5,       # fake number for now
+        "total_applicants": total_applicants,
+        "total_applications": total_applications,
+        "total_reviewers": total_reviewers,
+        "total_admins": total_admins,
+        "total_stewards": total_stewards,
+        "total_sponsors": total_sponsors,
     }
 
 

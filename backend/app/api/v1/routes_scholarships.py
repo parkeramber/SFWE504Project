@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas import ScholarshipCreate, ScholarshipRead, ScholarshipUpdate
+from app.schemas.suitability import SuitabilityResult
 from app.services import (
     list_scholarships,
     create_scholarship,
@@ -13,6 +14,8 @@ from app.services import (
     update_scholarship,
     delete_scholarship,
     search_scholarships as search_scholarships_service,
+    evaluate_application_suitability,
+    list_all_applications,
 )
 
 router = APIRouter(tags=["scholarships"])
@@ -68,3 +71,22 @@ def delete_scholarship_endpoint(
     ok = delete_scholarship(db, scholarship_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Scholarship not found")
+
+
+@router.get("/scholarships/{scholarship_id}/qualified", response_model=List[SuitabilityResult])
+def list_qualified_applicants(
+    scholarship_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Return suitability results for all applications tied to this scholarship.
+    """
+    apps = [
+        app for app in list_all_applications(db) if app.scholarship_id == scholarship_id
+    ]
+    results: List[SuitabilityResult] = []
+    for app in apps:
+        res = evaluate_application_suitability(db, app.id)
+        if res:
+            results.append(res)
+    return results

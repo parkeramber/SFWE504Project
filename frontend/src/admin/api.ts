@@ -6,6 +6,11 @@ export type AdminSummary = {
   total_scholarships: number;
   total_applicants: number;
   total_applications: number;
+  qualified_by_scholarship?: Record<string, number>;
+  total_reviewers?: number;
+  total_admins?: number;
+  total_stewards?: number;
+  total_sponsors?: number;
 };
 
 export type AdminUser = {
@@ -17,9 +22,33 @@ export type AdminUser = {
   is_active: boolean;
 };
 
-export async function fetchAdminSummary(): Promise<AdminSummary> {
-  const res = await api.get<AdminSummary>("/admin/summary");
+export async function fetchAdminSummary(accessToken?: string): Promise<AdminSummary> {
+  const token = accessToken ?? loadAccessToken();
+  const res = await api.get<AdminSummary>("/admin/summary", {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
   return res.data;
+}
+
+function loadAccessToken(): string | undefined {
+  try {
+    const stored = localStorage.getItem("tokens");
+    if (!stored) return undefined;
+    const parsed = JSON.parse(stored);
+    return parsed?.accessToken;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function fetchQualifiedByScholarship(
+  accessToken: string,
+  scholarshipId: number,
+) {
+  const res = await api.get(`/scholarships/${scholarshipId}/qualified`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return res.data as any[];
 }
 
 export async function listUsers(accessToken: string): Promise<AdminUser[]> {

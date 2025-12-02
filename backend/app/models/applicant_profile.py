@@ -14,6 +14,7 @@ class ApplicantProfile(Base):
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     student_id = Column(String, nullable=False)
     netid = Column(String, nullable=False)
+    citizenship = Column(String, nullable=True)
     degree_major = Column(String, nullable=False)
     degree_minor = Column(String, nullable=True)
     gpa = Column(Float, nullable=True)

@@ -23,12 +23,15 @@ import {
   listNotificationsForUser,
   fetchApplicantProfileByUser,
   fetchSuitability,
+  fetchSuitabilityByScholarship,
   type Review,
   type Notification,
   type ApplicantProfile,
   type SuitabilityResult,
 } from "../../applications/api";
 import type { ReviewInput } from "../../applications/api";
+import { loadTokens } from "../../auth/session";
+import { fetchApplicantProfile } from "../../applicant/api";
 
 function formatDeadline(deadline: string) {
   const d = new Date(deadline);
@@ -113,6 +116,7 @@ export default function Dashboard() {
   // Track scholarships applied to (frontend only)
   const [appliedIds, setAppliedIds] = useState<number[]>([]);
   const [userApplications, setUserApplications] = useState<Application[]>([]);
+  const [applicantProfile, setApplicantProfile] = useState<ApplicantProfile | null>(null);
 
   // Form fields
   const [essayText, setEssayText] = useState("");
@@ -195,6 +199,15 @@ export default function Dashboard() {
             if (!cancelled) {
               setAppliedIds(appData.map((app) => app.scholarship_id));
               setUserApplications(appData);
+            }
+            const tokens = loadTokens();
+            if (tokens) {
+              try {
+                const profile = await fetchApplicantProfile(tokens.accessToken);
+                if (!cancelled) setApplicantProfile(profile);
+              } catch (err) {
+                console.error("Error loading applicant profile", err);
+              }
             }
           } catch (err) {
             console.error("Error loading user applications", err);
@@ -520,6 +533,19 @@ export default function Dashboard() {
   const handleSubmitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !activeScholarship) return;
+    const eligibility = isEligibleForScholarship(
+      activeScholarship,
+      applicantProfile,
+    );
+    if (!eligibility.eligible) {
+      setApplyError(eligibility.reason || "You are not eligible for this scholarship.");
+      return;
+    }
+    // Deadline check (frontend hint)
+    if (activeScholarship.deadline && new Date(activeScholarship.deadline) < new Date()) {
+      setApplyError("The scholarship deadline has passed.");
+      return;
+    }
 
     setSubmittingApp(true);
     setApplyStatus(null);
@@ -606,7 +632,7 @@ export default function Dashboard() {
 
   // Split scholarships into "available" and "applied" using our local state
   const availableScholarships = scholarships.filter(
-    (s) => !appliedIds.includes(s.id),
+    (s) => !appliedIds.includes(s.id) && new Date(s.deadline) >= new Date(),
   );
   const appliedScholarships = scholarships.filter((s) =>
     appliedIds.includes(s.id),
@@ -641,42 +667,53 @@ export default function Dashboard() {
               <p>There are no more scholarships to apply for right now.</p>
             ) : (
               <div className="dashboard-list">
-                {availableScholarships.map((sch) => (
-                  <div key={sch.id} className="dashboard-card">
-                    <h3>{sch.name}</h3>
-                    <p>{sch.description}</p>
+            {availableScholarships.map((sch) => {
+              const eligibility = isEligibleForScholarship(
+                sch,
+                applicantProfile,
+              );
+              return (
+                <div key={sch.id} className="dashboard-card">
+                  <h3>{sch.name}</h3>
+                  <p>{sch.description}</p>
 
-                    <div className="dashboard-badges">
-                      {sch.requires_essay && (
-                        <span className="badge">Essay required</span>
-                      )}
-                      {sch.requires_transcript && (
-                        <span className="badge">Transcript required</span>
-                      )}
-                      {sch.requires_questions && (
-                        <span className="badge">Extra questions</span>
-                      )}
-                    </div>
-
-                    <div className="dashboard-meta">
-                      <span>Amount: ${sch.amount}</span>
-                      <span>Deadline: {formatDeadline(sch.deadline)}</span>
-                    </div>
-
-                    <p className="dashboard-reqs">
-                      <strong>Requirements:</strong>{" "}
-                      {sch.requirements || "See application for details."}
-                    </p>
-
-                    <button
-                      type="button"
-                      className="dashboard-button small"
-                      onClick={() => handleApply(sch)}
-                    >
-                      Apply
-                    </button>
+                  <div className="dashboard-badges">
+                    {sch.requires_essay && (
+                      <span className="badge">Essay required</span>
+                    )}
+                    {sch.requires_transcript && (
+                      <span className="badge">Transcript required</span>
+                    )}
+                    {sch.requires_questions && (
+                      <span className="badge">Extra questions</span>
+                    )}
                   </div>
-                ))}
+
+                  <div className="dashboard-meta">
+                    <span>Amount: ${sch.amount}</span>
+                    <span>Deadline: {formatDeadline(sch.deadline)}</span>
+                  </div>
+
+                  <p className="dashboard-reqs">
+                    <strong>Requirements:</strong>{" "}
+                    {sch.requirements || "See application for details."}
+                  </p>
+
+                  {!eligibility.eligible && (
+                    <p className="dashboard-error">{eligibility.reason}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    className="dashboard-button small"
+                    onClick={() => handleApply(sch)}
+                    disabled={!eligibility.eligible}
+                  >
+                    Apply
+                  </button>
+                </div>
+              );
+            })}
               </div>
             )}
           </section>
@@ -1069,6 +1106,7 @@ export default function Dashboard() {
                                 ? ` / Minor: ${profile.degree_minor}`
                                 : ""}
                             </li>
+                            <li>Citizenship: {profile.citizenship ?? "N/A"}</li>
                             <li>GPA: {profile.gpa ?? "N/A"}</li>
                             <li>Student ID: {profile.student_id}</li>
                             <li>NetID: {profile.netid}</li>
@@ -1365,3 +1403,22 @@ export default function Dashboard() {
     </div>
   );
 }
+  function isEligibleForScholarship(s: Scholarship, profile: ApplicantProfile | null) {
+    if (!profile) return { eligible: false, reason: "Complete your profile to apply." };
+    if (s.min_gpa !== null && s.min_gpa !== undefined) {
+      if (profile.gpa === null || profile.gpa === undefined || profile.gpa < s.min_gpa) {
+        return { eligible: false, reason: "Does not meet GPA requirement." };
+      }
+    }
+    if (s.required_major) {
+      if (!profile.degree_major || profile.degree_major.toLowerCase() !== s.required_major.toLowerCase()) {
+        return { eligible: false, reason: "Does not meet major requirement." };
+      }
+    }
+    if (s.required_citizenship) {
+      if (!profile.citizenship || profile.citizenship.toLowerCase() !== s.required_citizenship.toLowerCase()) {
+        return { eligible: false, reason: "Does not meet citizenship requirement." };
+      }
+    }
+    return { eligible: true, reason: "" };
+  }

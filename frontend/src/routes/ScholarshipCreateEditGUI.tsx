@@ -21,6 +21,10 @@ type FormState = {
   requires_essay: boolean;
   requires_transcript: boolean;
   requires_questions: boolean;
+  min_gpa: string;
+  required_citizenship: string;
+  required_major: string;
+  required_minor: string;
 };
 
 const emptyForm: FormState = {
@@ -32,6 +36,10 @@ const emptyForm: FormState = {
   requires_essay: false,
   requires_transcript: false,
   requires_questions: false,
+  min_gpa: "",
+  required_citizenship: "",
+  required_major: "",
+  required_minor: "",
 };
 
 export default function ScholarshipCreateEditGUI() {
@@ -111,6 +119,10 @@ export default function ScholarshipCreateEditGUI() {
       requires_essay: !!s.requires_essay,
       requires_transcript: !!s.requires_transcript,
       requires_questions: !!s.requires_questions,
+      min_gpa: s.min_gpa ? String(s.min_gpa) : "",
+      required_citizenship: s.required_citizenship || "",
+      required_major: s.required_major || "",
+      required_minor: s.required_minor || "",
     });
     setSuccess(null);
     setError(null);
@@ -137,6 +149,10 @@ export default function ScholarshipCreateEditGUI() {
       requires_essay: form.requires_essay,
       requires_transcript: form.requires_transcript,
       requires_questions: form.requires_questions,
+      min_gpa: form.min_gpa === "" ? null : Number(form.min_gpa),
+      required_citizenship: form.required_citizenship || null,
+      required_major: form.required_major || null,
+      required_minor: form.required_minor || null,
     };
 
     if (!payload.name || !payload.amount || !payload.deadline) {
@@ -286,6 +302,55 @@ export default function ScholarshipCreateEditGUI() {
                 rows={3}
                 value={form.requirements}
                 onChange={handleChange}
+              />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label>
+              Minimum GPA
+              <input
+                type="number"
+                step="0.01"
+                min={0}
+                max={4}
+                name="min_gpa"
+                value={form.min_gpa}
+                onChange={handleChange}
+                placeholder="e.g. 3.0"
+              />
+            </label>
+            <label>
+              Required Citizenship
+              <input
+                type="text"
+                name="required_citizenship"
+                value={form.required_citizenship}
+                onChange={handleChange}
+                placeholder="e.g. US Citizen, Permanent Resident"
+              />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label>
+              Required Major
+              <input
+                type="text"
+                name="required_major"
+                value={form.required_major}
+                onChange={handleChange}
+                placeholder="e.g. Software Engineering"
+              />
+            </label>
+            <label>
+              Required Minor (optional)
+              <input
+                type="text"
+                name="required_minor"
+                value={form.required_minor}
+                onChange={handleChange}
+                placeholder="e.g. Mathematics"
               />
             </label>
           </div>

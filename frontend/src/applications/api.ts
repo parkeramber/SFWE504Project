@@ -145,6 +145,7 @@ export interface ApplicantProfile {
   user_id: number;
   student_id: string;
   netid: string;
+  citizenship?: string | null;
   degree_major: string;
   degree_minor?: string | null;
   gpa?: number | null;
@@ -171,4 +172,11 @@ export async function fetchSuitability(
 ): Promise<SuitabilityResult> {
   const res = await api.get(`/applications/${applicationId}/suitability`);
   return res.data as SuitabilityResult;
+}
+
+export async function fetchSuitabilityByScholarship(
+  scholarshipId: number,
+): Promise<SuitabilityResult[]> {
+  const res = await api.get(`/scholarships/${scholarshipId}/qualified`);
+  return res.data as SuitabilityResult[];
 }

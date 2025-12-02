@@ -13,6 +13,7 @@ from app.schemas.application import ApplicationCreate, ApplicationRead
 from app.schemas.review import ReviewCreate, ReviewRead
 from app.schemas.suitability import SuitabilityResult
 from app.services.applicant_profile_service import get_profile_for_user
+from app.models.scholarship import Scholarship
 
 
 def create_application(
@@ -22,6 +23,25 @@ def create_application(
     """
     Create a new application for a given user & scholarship.
     """
+    # Enforce basic eligibility before creation
+    scholarship = db.get(Scholarship, payload.scholarship_id)
+    profile = get_profile_for_user(db, payload.user_id)
+
+    # Deadline enforcement
+    if scholarship and scholarship.deadline and scholarship.deadline < datetime.utcnow().date():
+        raise ValueError("The scholarship deadline has passed.")
+
+    if scholarship and profile:
+        if scholarship.min_gpa is not None:
+            if profile.gpa is None or profile.gpa < scholarship.min_gpa:
+                raise ValueError("Applicant does not meet GPA requirement.")
+        if scholarship.required_major:
+            if not profile.degree_major or profile.degree_major.lower() != scholarship.required_major.lower():
+                raise ValueError("Applicant does not meet major requirement.")
+        if scholarship.required_citizenship:
+            if not profile.citizenship or profile.citizenship.lower() != scholarship.required_citizenship.lower():
+                raise ValueError("Applicant does not meet citizenship requirement.")
+
     app_obj = Application(
         user_id=payload.user_id,
         scholarship_id=payload.scholarship_id,
@@ -87,8 +107,13 @@ def evaluate_application_suitability(
             )
 
     if scholarship.required_citizenship:
-        # Placeholder: profile lacks explicit citizenship field
-        notes.append(f"Citizenship required: {scholarship.required_citizenship} (profile missing field).")
+        if profile.citizenship and profile.citizenship.lower() == scholarship.required_citizenship.lower():
+            notes.append("Citizenship matches requirement.")
+        else:
+            qualified = False
+            notes.append(
+                f"Citizenship does not match requirement ({profile.citizenship or 'N/A'} ≠ {scholarship.required_citizenship})."
+            )
 
     if scholarship.required_major:
         if profile.degree_major and profile.degree_major.lower() == scholarship.required_major.lower():
