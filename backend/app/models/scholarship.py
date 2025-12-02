@@ -1,6 +1,6 @@
 # app/models/scholarship.py
 
-from sqlalchemy import Boolean, Column, Integer, String, Text, Date
+from sqlalchemy import Boolean, Column, Integer, String, Text, Date, Float
 from app.database import Base
 
 
@@ -13,6 +13,10 @@ class Scholarship(Base):
     amount = Column(Integer, nullable=False)
     deadline = Column(Date, nullable=False)
     requirements = Column(Text, nullable=True)
+    min_gpa = Column(Float, nullable=True)
+    required_citizenship = Column(String, nullable=True)
+    required_major = Column(String, nullable=True)
+    required_minor = Column(String, nullable=True)
 
     # NEW flags controlled by ENGR Admin
     requires_essay = Column(Boolean, nullable=False, default=False)

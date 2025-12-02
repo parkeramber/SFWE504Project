@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas.application import ApplicationCreate, ApplicationRead, ApplicationStatusUpdate
+from app.schemas.suitability import SuitabilityResult
 from app.schemas.review import ReviewCreate, ReviewRead
 from app.services import (
     create_application,
@@ -19,6 +20,8 @@ from app.services import (
     list_reviews_for_application,
     list_reviews_for_reviewer,
     update_application_status,
+    evaluate_application_suitability,
+    create_notification,
  
 )
 
@@ -95,6 +98,15 @@ def assign_reviewer_endpoint(
     """
     try:
         app_obj = assign_reviewer(db, application_id, reviewer_id)
+        # Notify the reviewer they have a new assignment
+        if app_obj:
+            message = f"You have been assigned to review application #{application_id}."
+            from app.schemas.notification import NotificationCreate
+
+            create_notification(
+                db,
+                payload=NotificationCreate(user_id=reviewer_id, message=message),
+            )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -119,6 +131,23 @@ def list_assigned_applications_for_reviewer_endpoint(
     """
     apps = list_applications_for_reviewer(db, reviewer_id)
     return apps
+
+
+@router.get("/{application_id}/suitability", response_model=SuitabilityResult)
+def get_application_suitability(
+    application_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Compute suitability for an application based on scholarship requirements and applicant profile.
+    """
+    result = evaluate_application_suitability(db, application_id)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application not found",
+        )
+    return result
 
 
 @router.post(
@@ -186,4 +215,3 @@ def update_application_status_endpoint(
             detail="Application not found",
         )
     return app_obj
-

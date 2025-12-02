@@ -25,6 +25,26 @@ def read_my_profile(
     return profile
 
 
+@router.get("/by-user/{user_id}", response_model=ApplicantProfileRead)
+def read_profile_for_user(
+    user_id: int,
+    current_user: User = Depends(
+        auth_service.require_roles(UserRole.REVIEWER, UserRole.ENGR_ADMIN, UserRole.STEWARD)
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Allow reviewers/admins/stewards to fetch an applicant's profile for evaluation.
+    """
+    profile = get_profile_for_user(db, user_id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Applicant profile not found",
+        )
+    return profile
+
+
 @router.put("/me", response_model=ApplicantProfileRead, status_code=status.HTTP_200_OK)
 def upsert_my_profile(
     payload: ApplicantProfileCreate,

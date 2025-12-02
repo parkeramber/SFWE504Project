@@ -8,6 +8,10 @@ export type Scholarship = {
   amount: number;
   deadline: string;      // ISO string from backend
   requirements: string;
+  min_gpa?: number | null;
+  required_citizenship?: string | null;
+  required_major?: string | null;
+  required_minor?: string | null;
 
   // NEW flags from backend
   requires_essay: boolean;
@@ -21,6 +25,10 @@ export type ScholarshipInput = {
   amount: number;
   deadline: string;      // "YYYY-MM-DD" for <input type="date" />
   requirements: string;
+  min_gpa?: number | null;
+  required_citizenship?: string | null;
+  required_major?: string | null;
+  required_minor?: string | null;
 
   // optional on create/edit (backend has defaults)
   requires_essay?: boolean;

@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.scholarship import Scholarship
+from app.models.application import Application
+from app.schemas.suitability import SuitabilityResult
+from app.services.application_service import evaluate_application_suitability
 from app.auth import service as auth_service
 from app.auth.schemas import UserAdminUpdate
 
@@ -75,3 +78,22 @@ def delete_user_admin(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     db.delete(user)
     db.commit()
+    return {"detail": "User deleted"}
+
+
+@router.get("/qualified/{scholarship_id}", response_model=list[SuitabilityResult])
+def qualified_applicants_for_scholarship(
+    scholarship_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(auth_service.require_roles(UserRole.ENGR_ADMIN)),
+):
+    """
+    Returns suitability results for all applications to a scholarship.
+    """
+    apps = db.query(Application).filter(Application.scholarship_id == scholarship_id).all()
+    results: list[SuitabilityResult] = []
+    for app in apps:
+        res = evaluate_application_suitability(db, app.id)
+        if res:
+            results.append(res)
+    return results

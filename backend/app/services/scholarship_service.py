@@ -38,6 +38,10 @@ def create_scholarship(db: Session, payload: ScholarshipCreate) -> Scholarship:
         amount=payload.amount,
         deadline=payload.deadline,
         requirements=payload.requirements,
+        min_gpa=payload.min_gpa,
+        required_citizenship=payload.required_citizenship,
+        required_major=payload.required_major,
+        required_minor=payload.required_minor,
         # NEW flags:
         requires_essay=payload.requires_essay,
         requires_transcript=payload.requires_transcript,
@@ -72,6 +76,14 @@ def update_scholarship(
         sch.deadline = payload.deadline
     if payload.requirements is not None:
         sch.requirements = payload.requirements
+    if payload.min_gpa is not None:
+        sch.min_gpa = payload.min_gpa
+    if payload.required_citizenship is not None:
+        sch.required_citizenship = payload.required_citizenship
+    if payload.required_major is not None:
+        sch.required_major = payload.required_major
+    if payload.required_minor is not None:
+        sch.required_minor = payload.required_minor
 
     # NEW optional updates for flags
     if payload.requires_essay is not None:
