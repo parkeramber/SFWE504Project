@@ -18,6 +18,10 @@ export default function ScholarshipCreateEditGUI() {
   const [amount, setAmount] = useState<number | "">("");
   const [deadline, setDeadline] = useState("");
   const [requirements, setRequirements] = useState("");
+  const [minGpa, setMinGpa] = useState<number | "">("");
+  const [requiredCitizenship, setRequiredCitizenship] = useState("");
+  const [requiredMajor, setRequiredMajor] = useState("");
+  const [requiredMinor, setRequiredMinor] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -90,6 +94,10 @@ export default function ScholarshipCreateEditGUI() {
         amount: Number(amount),
         deadline, // yyyy-mm-dd from <input type="date" />
         requirements,
+        min_gpa: minGpa === "" ? null : Number(minGpa),
+        required_citizenship: requiredCitizenship || null,
+        required_major: requiredMajor || null,
+        required_minor: requiredMinor || null,
       });
 
       setMessage("Scholarship created successfully!");
@@ -100,6 +108,10 @@ export default function ScholarshipCreateEditGUI() {
       setAmount("");
       setDeadline("");
       setRequirements("");
+      setMinGpa("");
+      setRequiredCitizenship("");
+      setRequiredMajor("");
+      setRequiredMinor("");
     } catch (err: any) {
       console.error("Failed to create scholarship", err);
       setError("Failed to create scholarship. Please try again.");
@@ -198,6 +210,55 @@ export default function ScholarshipCreateEditGUI() {
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
             placeholder="Minimum 3.0 GPA, Engineering major…"
+          />
+        </label>
+
+        <label className="dashboard-label">
+          Minimum GPA
+          <input
+            className="dashboard-input"
+            type="number"
+            step="0.01"
+            min={0}
+            max={4}
+            value={minGpa}
+            onChange={(e) =>
+              setMinGpa(e.target.value === "" ? "" : Number(e.target.value))
+            }
+            placeholder="e.g. 3.0"
+          />
+        </label>
+
+        <label className="dashboard-label">
+          Required Citizenship
+          <input
+            className="dashboard-input"
+            type="text"
+            value={requiredCitizenship}
+            onChange={(e) => setRequiredCitizenship(e.target.value)}
+            placeholder="e.g. US Citizen, Permanent Resident"
+          />
+        </label>
+
+        <label className="dashboard-label">
+          Required Major
+          <input
+            className="dashboard-input"
+            type="text"
+            value={requiredMajor}
+            onChange={(e) => setRequiredMajor(e.target.value)}
+            placeholder="e.g. Software Engineering"
+          />
+        </label>
+
+        <label className="dashboard-label">
+          Required Minor (optional)
+          <input
+            className="dashboard-input"
+            type="text"
+            value={requiredMinor}
+            onChange={(e) => setRequiredMinor(e.target.value)}
+            placeholder="e.g. Mathematics"
           />
         </label>
 

@@ -20,7 +20,13 @@ import {
   submitReview,
   updateApplicationStatus,
   listReviewsByReviewer,
+  listNotificationsForUser,
+  fetchApplicantProfileByUser,
+  fetchSuitability,
   type Review,
+  type Notification,
+  type ApplicantProfile,
+  type SuitabilityResult,
 } from "../../applications/api";
 import type { ReviewInput } from "../../applications/api";
 
@@ -39,6 +45,49 @@ function formatStatus(status?: string) {
     submitted: "Submitted",
   };
   return map[status] || status.replaceAll("_", " ");
+}
+
+function evaluateSuitability(
+  profile: ApplicantProfile | null | undefined,
+  scholarship: Scholarship | undefined,
+) {
+  if (!profile || !scholarship) {
+    return { status: "unknown" as const, notes: ["Missing profile or scholarship data."] };
+  }
+
+  const notes: string[] = [];
+  let meets = true;
+
+  // GPA heuristic: look for a number like 3.2/3.5 in requirements
+  const reqText = scholarship.requirements || "";
+  const gpaMatch = reqText.match(/(\d\.\d+)/);
+  if (gpaMatch && profile.gpa !== null && profile.gpa !== undefined) {
+    const reqGpa = parseFloat(gpaMatch[1]);
+    if (!Number.isNaN(reqGpa)) {
+      if (profile.gpa >= reqGpa) {
+        notes.push(`Meets GPA requirement (${profile.gpa} ≥ ${reqGpa})`);
+      } else {
+        meets = false;
+        notes.push(`Below GPA requirement (${profile.gpa ?? "N/A"} < ${reqGpa})`);
+      }
+    }
+  }
+
+  // Major heuristic: match text
+  if (profile.degree_major && reqText) {
+    const majorInReq = reqText.toLowerCase().includes(profile.degree_major.toLowerCase());
+    if (majorInReq) {
+      notes.push("Major matches requirement");
+    } else {
+      notes.push("Major may not match requirement");
+    }
+  }
+
+  if (!notes.length) {
+    notes.push("No structured requirements detected; manual review needed.");
+  }
+
+  return { status: meets ? "qualified" : "unqualified", notes };
 }
 
 export default function Dashboard() {
@@ -97,6 +146,16 @@ export default function Dashboard() {
   const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [acceptedApps, setAcceptedApps] = useState<Application[]>([]);
+  const [profiles, setProfiles] = useState<Record<number, ApplicantProfile | null>>({});
+  const [qualifiedOnly, setQualifiedOnly] = useState(false);
+  const [suitabilityMap, setSuitabilityMap] = useState<
+    Record<number, SuitabilityResult>
+  >({});
+  const [adminSuitability, setAdminSuitability] = useState<
+    Record<number, SuitabilityResult>
+  >({});
 
   const inReviewByScholarship = assignedApps.reduce<Record<number, Application[]>>(
     (acc, app) => {
@@ -150,6 +209,28 @@ export default function Dashboard() {
             const apps = await listAllApplications();
             if (!cancelled) {
               setAllApplications(apps);
+              // load suitability for admin view
+              Promise.all(
+                apps.map(async (app) => {
+                  try {
+                    const res = await fetchSuitability(app.id);
+                    return { appId: app.id, res };
+                  } catch {
+                    return { appId: app.id, res: { status: "unknown", notes: [] } };
+                  }
+                }),
+              ).then((results) => {
+                if (cancelled) return;
+                setAdminSuitability(
+                  results.reduce<Record<number, SuitabilityResult>>(
+                    (acc, { appId, res }) => {
+                      acc[appId] = res as SuitabilityResult;
+                      return acc;
+                    },
+                    {},
+                  ),
+                );
+              });
             }
           } catch (err) {
             console.error("Error loading applications for admin", err);
@@ -163,7 +244,7 @@ export default function Dashboard() {
           }
         }
 
-        // If REVIEWER, load assigned applications and existing reviews
+        // If REVIEWER, load assigned applications and existing reviews + notifications
         if (me.role === "reviewer" && !cancelled) {
           try {
             setAssignedLoading(true);
@@ -171,13 +252,71 @@ export default function Dashboard() {
             setReviewsLoading(true);
             setReviewsError(null);
 
-            const [apps, reviews] = await Promise.all([
+            const [apps, reviews, notifs] = await Promise.all([
               listApplicationsAssignedToReviewer(me.id),
               listReviewsByReviewer(me.id),
+              listNotificationsForUser(me.id),
             ]);
             if (!cancelled) {
-              setAssignedApps(apps);
+              const decided = apps.filter(
+                (a) => a.status === "accepted" || a.status === "rejected",
+              );
+              const active = apps.filter(
+                (a) => a.status !== "accepted" && a.status !== "rejected",
+              );
+              setAssignedApps(active);
+              setAcceptedApps(decided);
               setMyReviews(reviews);
+              setNotifications(notifs);
+              // Preload applicant profiles
+              const uniqueUserIds = Array.from(
+                new Set(apps.map((a) => a.user_id)),
+              );
+              Promise.all(
+                uniqueUserIds.map(async (uid) => {
+                  try {
+                    const prof = await fetchApplicantProfileByUser(uid);
+                    return { uid, prof };
+                  } catch (err) {
+                    console.error("Error fetching applicant profile", err);
+                    return { uid, prof: null };
+                  }
+                }),
+              ).then((results) => {
+                if (cancelled) return;
+                setProfiles(
+                  results.reduce<Record<number, ApplicantProfile | null>>(
+                    (acc, { uid, prof }) => {
+                      acc[uid] = prof;
+                      return acc;
+                    },
+                    {},
+                  ),
+                );
+              });
+              // Fetch suitability for each app
+              Promise.all(
+                apps.map(async (app) => {
+                  try {
+                    const res = await fetchSuitability(app.id);
+                    return { appId: app.id, res };
+                  } catch (err) {
+                    console.error("Error fetching suitability", err);
+                    return { appId: app.id, res: { status: "unknown", notes: ["Unavailable"] } };
+                  }
+                }),
+              ).then((results) => {
+                if (cancelled) return;
+                setSuitabilityMap(
+                  results.reduce<Record<number, SuitabilityResult>>(
+                    (acc, { appId, res }) => {
+                      acc[appId] = res as SuitabilityResult;
+                      return acc;
+                    },
+                    {},
+                  ),
+                );
+              });
               setReviewDrafts(
                 apps.reduce((acc, app) => {
                   const existing = reviews.find(
@@ -327,6 +466,15 @@ export default function Dashboard() {
           ? prev.filter((app) => app.id !== appId)
           : prev.map((app) => (app.id === appId ? updatedApp : app)),
       );
+      if (draft.status === "accepted" || draft.status === "rejected") {
+        setAcceptedApps((prev) => {
+          const existing = prev.find((a) => a.id === appId);
+          if (existing) {
+            return prev.map((a) => (a.id === appId ? updatedApp : a));
+          }
+          return [...prev, updatedApp];
+        });
+      }
 
       setMyReviews((prev) => {
         const idx = prev.findIndex(
@@ -785,13 +933,64 @@ export default function Dashboard() {
               </ul>
             )}
 
+            {allApplications.length > 0 && (
+              <>
+                <h4 className="dashboard-section-subtitle">
+                  Qualified Applicants by Scholarship
+                </h4>
+                <div className="reviewer-compare-grid">
+                  {Object.entries(
+                    allApplications.reduce<Record<number, Application[]>>((acc, app) => {
+                      acc[app.scholarship_id] = acc[app.scholarship_id] || [];
+                      acc[app.scholarship_id].push(app);
+                      return acc;
+                    }, {}),
+                  ).map(([schId, apps]) => {
+                    const scholarship = scholarships.find(
+                      (s) => s.id === Number(schId),
+                    );
+                    const qualifiedApps = apps.filter(
+                      (app) => adminSuitability[app.id]?.status === "qualified",
+                    );
+                    return (
+                      <div key={schId} className="reviewer-compare-card">
+                        <div className="reviewer-compare-header">
+                          <strong>
+                            {scholarship ? scholarship.name : `Scholarship ${schId}`}
+                          </strong>
+                          <span className="badge badge--muted">
+                            {qualifiedApps.length} qualified
+                          </span>
+                        </div>
+                        <div className="reviewer-compare-body">
+                          {qualifiedApps.length === 0 ? (
+                            <p className="dashboard-text">No qualified applicants yet.</p>
+                          ) : (
+                            qualifiedApps.map((app) => (
+                              <div key={app.id} className="reviewer-compare-row">
+                                <span className="reviewer-compare-label">
+                                  App #{app.id}
+                                </span>
+                                <span>Applicant: {app.user_id}</span>
+                                <span>Status: {formatStatus(app.status)}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
           </div>
         </section>
       )}
 
       {/* REVIEWER VIEW */}
       {user.role === "reviewer" && (
-        <section className="dashboard-section">
+        <section className="dashboard-section" id="reviewer">
           <h3 className="dashboard-section-title">Reviewer Panel</h3>
           <p className="dashboard-text">
             View and work through the applications assigned to you.
@@ -801,6 +1000,16 @@ export default function Dashboard() {
           {reviewMessage && <p className="dashboard-success">{reviewMessage}</p>}
           {assignedLoading && <p>Loading assigned applications…</p>}
           {reviewsError && <p className="dashboard-error">{reviewsError}</p>}
+          <div className="dashboard-admin-actions" style={{ marginBottom: "0.5rem" }}>
+            <label className="label-text">
+              <input
+                type="checkbox"
+                checked={qualifiedOnly}
+                onChange={(e) => setQualifiedOnly(e.target.checked)}
+              />{" "}
+              Show qualified only
+            </label>
+          </div>
 
           {!assignedLoading && assignedApps.length === 0 && (
             <p>No applications have been assigned to you yet.</p>
@@ -808,11 +1017,22 @@ export default function Dashboard() {
 
           {assignedApps.length > 0 && (
             <ul className="dashboard-admin-list">
-              {assignedApps.map((app) => {
-                const scholarship = scholarships.find(
-                  (sch) => sch.id === app.scholarship_id,
-                );
-                const draft = reviewDrafts[app.id];
+              {assignedApps
+                .filter((app) => {
+                  if (!qualifiedOnly) return true;
+                  const suitability = suitabilityMap[app.id];
+                  return suitability?.status === "qualified";
+                })
+                .map((app) => {
+                  const scholarship = scholarships.find(
+                    (sch) => sch.id === app.scholarship_id,
+                  );
+                  const draft = reviewDrafts[app.id];
+                  const profile = profiles[app.user_id];
+                  const suitability = suitabilityMap[app.id] ?? {
+                    status: "unknown",
+                    notes: ["Loading suitability..."],
+                  };
                 return (
                   <li key={app.id} className="reviewer-card">
                     <div className="reviewer-card__meta">
@@ -835,6 +1055,55 @@ export default function Dashboard() {
                         <span className="badge badge--muted">
                           Transcript: {app.transcript_url ? "Provided" : "N/A"}
                         </span>
+                      </div>
+                    </div>
+
+                    <div className="reviewer-qual">
+                      <div>
+                        <div className="label-text">Applicant Snapshot</div>
+                        {profile ? (
+                          <ul className="qual-list">
+                            <li>
+                              Major: {profile.degree_major}
+                              {profile.degree_minor
+                                ? ` / Minor: ${profile.degree_minor}`
+                                : ""}
+                            </li>
+                            <li>GPA: {profile.gpa ?? "N/A"}</li>
+                            <li>Student ID: {profile.student_id}</li>
+                            <li>NetID: {profile.netid}</li>
+                          </ul>
+                        ) : (
+                          <p className="dashboard-text">
+                            Profile not available. Ask applicant to complete their
+                            profile.
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <div className="label-text">Scholarship Requirements</div>
+                        <p className="dashboard-text">
+                          {scholarship?.requirements || "Not specified."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="reviewer-qual">
+                      <div>
+                        <div className="label-text">Suitable Applicant Report</div>
+                        <p className="dashboard-text">
+                          Status:{" "}
+                          {suitability.status === "qualified"
+                            ? "Qualified"
+                            : suitability.status === "unqualified"
+                              ? "Possibly Not Qualified"
+                              : "Unknown"}
+                        </p>
+                        <ul className="qual-list">
+                          {suitability.notes.map((n, idx) => (
+                            <li key={idx}>{n}</li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
 
@@ -973,6 +1242,34 @@ export default function Dashboard() {
         </section>
       )}
 
+      {user.role === "reviewer" && acceptedApps.length > 0 && (
+        <section className="dashboard-section">
+          <h3 className="dashboard-section-title">Accepted / Decided</h3>
+          <ul className="dashboard-admin-list">
+            {acceptedApps.map((app) => {
+              const scholarship = scholarships.find(
+                (s) => s.id === app.scholarship_id,
+              );
+              const review = myReviews.find(
+                (r) => r.application_id === app.id && r.reviewer_id === user.id,
+              );
+              return (
+                <li key={app.id} className="dashboard-admin-item">
+                  <div className="dashboard-admin-meta">
+                    <strong>Application #{app.id}</strong>
+                    <span>
+                      {scholarship ? scholarship.name : `Scholarship ${app.scholarship_id}`}
+                    </span>
+                    <span>Status: {formatStatus(app.status)}</span>
+                    <span>Score: {review?.score ?? "—"}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {user.role === "reviewer" && (
         <section className="dashboard-section">
           <h3 className="dashboard-section-title">My Submitted Reviews</h3>
@@ -987,9 +1284,9 @@ export default function Dashboard() {
           {myReviews.length > 0 && (
             <ul className="reviewer-card-list">
               {myReviews.map((review) => {
-                const app = assignedApps.find(
-                  (a) => a.id === review.application_id,
-                );
+                const app =
+                  assignedApps.find((a) => a.id === review.application_id) ||
+                  acceptedApps.find((a) => a.id === review.application_id);
                 const scholarship = scholarships.find(
                   (sch) => sch.id === app?.scholarship_id,
                 );
@@ -1039,6 +1336,7 @@ export default function Dashboard() {
               })}
             </ul>
           )}
+
         </section>
       )}
 

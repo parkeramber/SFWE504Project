@@ -11,6 +11,10 @@ class ScholarshipBase(BaseModel):
     amount: int
     deadline: date
     requirements: Optional[str] = None
+    min_gpa: Optional[float] = None
+    required_citizenship: Optional[str] = None
+    required_major: Optional[str] = None
+    required_minor: Optional[str] = None
 
     # NEW fields – what the admin can toggle
     requires_essay: bool = False
@@ -30,6 +34,10 @@ class ScholarshipUpdate(BaseModel):
     amount: Optional[int] = None
     deadline: Optional[date] = None
     requirements: Optional[str] = None
+    min_gpa: Optional[float] = None
+    required_citizenship: Optional[str] = None
+    required_major: Optional[str] = None
+    required_minor: Optional[str] = None
 
     # NEW optional flags for partial updates
     requires_essay: Optional[bool] = None

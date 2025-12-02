@@ -7,8 +7,12 @@ from sqlalchemy.orm import Session
 from app.models.application import Application
 from app.models.review import Review
 from app.models.user import User
+from app.models.scholarship import Scholarship
+from app.models.applicant_profile import ApplicantProfile
 from app.schemas.application import ApplicationCreate, ApplicationRead
 from app.schemas.review import ReviewCreate, ReviewRead
+from app.schemas.suitability import SuitabilityResult
+from app.services.applicant_profile_service import get_profile_for_user
 
 
 def create_application(
@@ -53,6 +57,56 @@ def get_application(db: Session, application_id: int) -> Optional[Application]:
         .filter(Application.id == application_id)
         .first()
     )
+
+
+def evaluate_application_suitability(
+    db: Session, application_id: int
+) -> Optional[SuitabilityResult]:
+    app_obj = get_application(db, application_id)
+    if not app_obj:
+        return None
+    scholarship = db.get(Scholarship, app_obj.scholarship_id)
+    profile = get_profile_for_user(db, app_obj.user_id)
+
+    if not scholarship or not profile:
+        return SuitabilityResult(
+            status="unknown",
+            notes=["Missing scholarship or applicant profile data."],
+        )
+
+    notes: list[str] = []
+    qualified = True
+
+    if scholarship.min_gpa is not None:
+        if profile.gpa is not None and profile.gpa >= scholarship.min_gpa:
+            notes.append(f"Meets GPA requirement ({profile.gpa} ≥ {scholarship.min_gpa}).")
+        else:
+            qualified = False
+            notes.append(
+                f"Below GPA requirement ({profile.gpa if profile.gpa is not None else 'N/A'} < {scholarship.min_gpa})."
+            )
+
+    if scholarship.required_citizenship:
+        # Placeholder: profile lacks explicit citizenship field
+        notes.append(f"Citizenship required: {scholarship.required_citizenship} (profile missing field).")
+
+    if scholarship.required_major:
+        if profile.degree_major and profile.degree_major.lower() == scholarship.required_major.lower():
+            notes.append("Major matches requirement.")
+        else:
+            qualified = False
+            notes.append("Major does not match requirement.")
+
+    if scholarship.required_minor:
+        if profile.degree_minor and profile.degree_minor.lower() == scholarship.required_minor.lower():
+            notes.append("Minor matches requirement.")
+        else:
+            notes.append("Minor requirement not confirmed.")
+
+    status = "qualified" if qualified else "unqualified"
+    if not notes:
+        notes.append("No structured requirements found; manual review needed.")
+    return SuitabilityResult(status=status, notes=notes)
 def assign_reviewer(
     db: Session,
     application_id: int,

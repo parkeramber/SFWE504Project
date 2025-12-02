@@ -20,11 +20,18 @@ from .application_service import (
     list_reviews_for_application,
     list_reviews_for_reviewer,
     update_application_status,
+    evaluate_application_suitability,
 )
 from .applicant_profile_service import (
     applicant_profile_exists,
     get_profile_for_user,
     upsert_applicant_profile,
+)
+from .notification_service import (
+    create_notification,
+    list_notifications_for_user,
+    list_unread_notifications_for_user,
+    mark_notification_read,
 )
 
 __all__ = [
@@ -46,8 +53,14 @@ __all__ = [
     "list_reviews_for_application",
     "list_reviews_for_reviewer",
     "update_application_status",
+    "evaluate_application_suitability",
     # applicant profiles
     "applicant_profile_exists",
     "get_profile_for_user",
     "upsert_applicant_profile",
+    # notifications
+    "create_notification",
+    "list_notifications_for_user",
+    "list_unread_notifications_for_user",
+    "mark_notification_read",
 ]

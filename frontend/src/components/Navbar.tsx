@@ -4,6 +4,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { fetchMe } from "../auth/api";
 import { loadTokens, clearTokens } from "../auth/session";
 import type { User, Tokens } from "../auth/types";
+import {
+  listNotificationsForUser,
+  markNotificationRead,
+  type Notification,
+} from "../applications/api";
 
 export default function Navbar() {
   const location = useLocation();
@@ -18,6 +23,9 @@ export default function Navbar() {
   // but keeping them is fine if you want them for later
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
 
   // ---- helper to get "First Last" or fallback to email ----
   const displayName = useMemo(() => {
@@ -98,6 +106,26 @@ export default function Navbar() {
     navigate("/login", { replace: true });
   };
 
+  // Load reviewer notifications count
+  useEffect(() => {
+    const loadNotifs = async () => {
+      if (!user || user.role !== "reviewer") {
+        setNotificationCount(0);
+        return;
+      }
+      try {
+        const data = await listNotificationsForUser(user.id);
+        setNotifications(data);
+        setNotificationCount(data.filter((n) => !n.is_read).length);
+      } catch (err) {
+        console.error("Failed to load notifications", err);
+        setNotifications([]);
+        setNotificationCount(0);
+      }
+    };
+    void loadNotifs();
+  }, [user]);
+
   return (
     <header className="app-navbar">
       <div className="app-navbar-inner">
@@ -118,6 +146,95 @@ export default function Navbar() {
                 {displayName || "..."}
               </span>
             </div>
+            {user?.role === "reviewer" && (
+              <div className="notif-wrapper">
+                <button
+                  type="button"
+                  className="notif-button"
+                  onClick={() => {
+                    setShowNotifPanel((s) => !s);
+                    // Mark unread as read when opening
+                    if (!showNotifPanel) {
+                      void (async () => {
+                        const unread = notifications.filter((n) => !n.is_read);
+                        if (unread.length) {
+                          try {
+                            await Promise.all(
+                              unread.map((n) => markNotificationRead(n.id)),
+                            );
+                            setNotifications((prev) =>
+                              prev.map((n) => ({ ...n, is_read: true })),
+                            );
+                            setNotificationCount(0);
+                          } catch (err) {
+                            console.error("Failed to mark notifications read", err);
+                          }
+                        } else {
+                          setNotificationCount(0);
+                        }
+                      })();
+                    } else {
+                      setNotificationCount(0);
+                    }
+                  }}
+                  title="Reviewer notifications"
+                >
+                  <span aria-hidden="true">🔔</span>
+                  {notificationCount > 0 && (
+                    <span className="notif-badge">
+                      {notificationCount > 9 ? "9+" : notificationCount}
+                    </span>
+                  )}
+                </button>
+                {showNotifPanel && (
+                  <div className="notif-panel">
+                    <div className="notif-panel-header">
+                      <strong>Notifications</strong>
+                      <button
+                        type="button"
+                        className="notif-close"
+                        onClick={() => setShowNotifPanel(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {notifications.length === 0 && (
+                      <p className="notif-empty">No notifications.</p>
+                    )}
+                    {notifications.length > 0 && (
+                      <>
+                        <div className="notif-section">Unread</div>
+                        <ul className="notif-list">
+                          {notifications
+                            .filter((n) => !n.is_read)
+                            .map((n) => (
+                              <li key={n.id} className="notif-item">
+                                <div className="notif-msg">{n.message}</div>
+                                <div className="notif-meta">
+                                  {new Date(n.created_at).toLocaleString()}
+                                </div>
+                              </li>
+                            ))}
+                        </ul>
+                        <div className="notif-section">Read</div>
+                        <ul className="notif-list">
+                          {notifications
+                            .filter((n) => n.is_read)
+                            .map((n) => (
+                              <li key={n.id} className="notif-item notif-item--read">
+                                <div className="notif-msg">{n.message}</div>
+                                <div className="notif-meta">
+                                  {new Date(n.created_at).toLocaleString()}
+                                </div>
+                              </li>
+                            ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <Link
               to="/myprofile"
               className="profile-trigger"

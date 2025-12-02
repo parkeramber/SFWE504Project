@@ -540,6 +540,35 @@
   justify-content: flex-start;
 }
 
+.reviewer-qual {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #f9fafb;
+}
+
+.qual-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0;
+  display: grid;
+  gap: 0.2rem;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+.qual-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #111827;
+}
+
 .label-text {
   display: block;
   font-size: 0.85rem;

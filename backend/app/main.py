@@ -11,6 +11,7 @@ from app.api.v1 import (
     routes_admin,
     routes_applications,
     routes_applicant_profile,
+    routes_notifications,
 )
 
 Base.metadata.create_all(bind=engine)
@@ -44,3 +45,6 @@ app.include_router(routes_applications.router, prefix="/api/v1", tags=["applicat
 
 # Applicant onboarding/profile routes
 app.include_router(routes_applicant_profile.router, prefix="/api/v1", tags=["applicant_profile"])
+
+# Notifications
+app.include_router(routes_notifications.router, prefix="/api/v1", tags=["notifications"])

@@ -264,7 +264,48 @@
 .profile-trigger {
   background: #fff;
   color: #0f172a;
-  border: 1px solid #d1d5db;
+  border: 2px solid #d1d5db;
+  padding: 0.45rem 0.65rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 1.1rem;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+
+}
+
+.profile-trigger.active {
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+}
+
+.logout-button {
+  background: #fff;
+  color: #0f172a;
+  border: 2px solid #d1d5db;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.logout-button:hover {
+  background: #f8eded;
+}
+
+.notif-wrapper {
+  position: relative;
+}
+
+.notif-button {
+  background: #fff;
+  color: #0f172a;
+  border: 2px solid #d1d5db;
   padding: 0.45rem 0.65rem;
   border-radius: 12px;
   font-weight: 700;
@@ -278,23 +319,89 @@
   text-decoration: none;
 }
 
-.profile-trigger.active {
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
-}
-
-.logout-button {
-  background: transparent;
-  border: 1px solid #d6bbbb;
-  color: #7a4e4e;
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+.notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
   font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 6px 12px rgba(220, 38, 38, 0.25);
 }
 
-.logout-button:hover {
-  background: #f8eded;
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 300px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.4rem;
+  z-index: 20;
+}
+
+.notif-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notif-close {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.notif-empty {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+}
+
+.notif-section {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
+  margin-top: 0.3rem;
+}
+
+.notif-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.notif-item {
+  padding: 0.5rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.notif-item--read {
+  opacity: 0.75;
+}
+
+.notif-msg {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.notif-meta {
+  color: #6b7280;
+  font-size: 0.8rem;
 }
 
 .profile-panel {

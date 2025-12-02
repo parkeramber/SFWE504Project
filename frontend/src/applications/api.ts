@@ -115,3 +115,60 @@ export async function updateApplicationStatus(
   });
   return res.data as Application;
 }
+
+// Notifications
+export interface Notification {
+  id: number;
+  user_id: number;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export async function listNotificationsForUser(
+  userId: number,
+): Promise<Notification[]> {
+  const res = await api.get(`/notifications/user/${userId}`);
+  return res.data as Notification[];
+}
+
+export async function markNotificationRead(
+  notificationId: number,
+): Promise<Notification> {
+  const res = await api.post(`/notifications/${notificationId}/read`);
+  return res.data as Notification;
+}
+
+// Applicant profile (for reviewer/admin)
+export interface ApplicantProfile {
+  id: number;
+  user_id: number;
+  student_id: string;
+  netid: string;
+  degree_major: string;
+  degree_minor?: string | null;
+  gpa?: number | null;
+  academic_achievements?: string | null;
+  financial_information?: string | null;
+  written_essays?: string | null;
+}
+
+export async function fetchApplicantProfileByUser(
+  userId: number,
+): Promise<ApplicantProfile> {
+  const res = await api.get(`/applicant/profile/by-user/${userId}`);
+  return res.data as ApplicantProfile;
+}
+
+// Suitability
+export interface SuitabilityResult {
+  status: "qualified" | "unqualified" | "unknown";
+  notes: string[];
+}
+
+export async function fetchSuitability(
+  applicationId: number,
+): Promise<SuitabilityResult> {
+  const res = await api.get(`/applications/${applicationId}/suitability`);
+  return res.data as SuitabilityResult;
+}
