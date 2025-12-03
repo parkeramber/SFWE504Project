@@ -11,7 +11,7 @@ import {
   type Scholarship,
   type ScholarshipInput,
 } from "../scholarships/api";
-
+import { useNavigate } from "react-router-dom";
 type FormState = {
   name: string;
   description: string;
@@ -52,7 +52,7 @@ export default function ScholarshipCreateEditGUI() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
+  const navigate = useNavigate();
   // Load user + scholarships
   useEffect(() => {
     let cancelled = false;
@@ -162,20 +162,39 @@ export default function ScholarshipCreateEditGUI() {
     }
 
     try {
-      if (editingId === null) {
-        // Create new
-        const created = await createScholarship(payload);
-        setScholarships((prev) => [...prev, created]);
-        setSuccess("Scholarship created successfully.");
-      } else {
-        // Update existing
-        const updated = await updateScholarship(editingId, payload);
-        setScholarships((prev) =>
-          prev.map((s) => (s.id === editingId ? updated : s)),
-        );
-        setSuccess("Scholarship updated successfully.");
+      if (user.role === "sponsor_donor") {
+        if (editingId === null) {
+          // Create new
+          const created = await createScholarship(payload);
+          setScholarships((prev) => [...prev, created]);
+          setSuccess("Scholarship creation request submitted successfully.");
+        } else {
+          // Update existing
+          const updated = await updateScholarship(editingId, payload);
+          setScholarships((prev) =>
+            prev.map((s) => (s.id === editingId ? updated : s)),
+          );
+          setSuccess("Scholarship update request submitted successfully.");
+        }
+        resetForm();
+        navigate("/dashboard");
       }
-      resetForm();
+      else {
+        if (editingId === null) {
+          // Create new
+          const created = await createScholarship(payload);
+          setScholarships((prev) => [...prev, created]);
+          setSuccess("Scholarship created successfully.");
+        } else {
+          // Update existing
+          const updated = await updateScholarship(editingId, payload);
+          setScholarships((prev) =>
+            prev.map((s) => (s.id === editingId ? updated : s)),
+          );
+          setSuccess("Scholarship updated successfully.");
+        }
+        resetForm();
+      }
     } catch (err: any) {
       console.error("Error saving scholarship", err);
       setError(err?.response?.data?.detail ?? "Failed to save scholarship.");
@@ -222,12 +241,201 @@ export default function ScholarshipCreateEditGUI() {
     );
   }
 
-  if (user.role !== "engr_admin") {
+  if (user.role !== "engr_admin" && user.role !== "sponsor_donor") {
     return (
       <div className="dashboard-page">
         <div className="dashboard-card">
           <h2>Access denied</h2>
           <p>You must be an ENGR Admin to manage scholarships.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user.role === "sponsor_donor") {
+    return (
+      <div className="dashboard-page">
+        <div className="dashboard-card">
+          <h2>Scholarships Request</h2>
+          <p className="lead-text">
+            Use this form to request new scholarships or update existing ones.
+          </p>
+
+          {error && <p className="dashboard-error">{error}</p>}
+          {success && <p className="dashboard-success">{success}</p>}
+
+          <form className="scholarship-form" onSubmit={handleSubmit}>
+            <div className="form-row">
+              <label>
+                Name
+                <input
+                  name="name"
+                  type="text"
+                  value={form.name}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+
+              <label>
+                Amount (USD)
+                <input
+                  name="amount"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.amount}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+
+              <label>
+                Deadline
+                <input
+                  name="deadline"
+                  type="date"
+                  value={form.deadline}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="form-row">
+              <label className="form-full">
+                Description
+                <textarea
+                  name="description"
+                  rows={3}
+                  value={form.description}
+                  onChange={handleChange}
+                />
+              </label>
+            </div>
+
+            <div className="form-row">
+              <label className="form-full">
+                Requirements
+                <textarea
+                  name="requirements"
+                  rows={3}
+                  value={form.requirements}
+                  onChange={handleChange}
+                />
+              </label>
+            </div>
+
+            <div className="form-row">
+              <label>
+                Minimum GPA
+                <input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={4}
+                  name="min_gpa"
+                  value={form.min_gpa}
+                  onChange={handleChange}
+                  placeholder="e.g. 3.0"
+                />
+              </label>
+              <label>
+                Required Citizenship
+                <input
+                  type="text"
+                  name="required_citizenship"
+                  value={form.required_citizenship}
+                  onChange={handleChange}
+                  placeholder="e.g. US Citizen, Permanent Resident"
+                />
+              </label>
+            </div>
+
+            <div className="form-row">
+              <label>
+                Required Major
+                <input
+                  type="text"
+                  name="required_major"
+                  value={form.required_major}
+                  onChange={handleChange}
+                  placeholder="e.g. Software Engineering"
+                />
+              </label>
+              <label>
+                Required Minor (optional)
+                <input
+                  type="text"
+                  name="required_minor"
+                  value={form.required_minor}
+                  onChange={handleChange}
+                  placeholder="e.g. Mathematics"
+                />
+              </label>
+            </div>
+
+            {/* NEW: Application requirement toggles */}
+            <div className="form-row">
+              <fieldset className="form-full">
+                <legend>Application requirements</legend>
+                <label className="checkbox-inline">
+                  <input
+                    type="checkbox"
+                    name="requires_essay"
+                    checked={form.requires_essay}
+                    onChange={handleChange}
+                  />
+                  Essay required
+                </label>
+                <label className="checkbox-inline">
+                  <input
+                    type="checkbox"
+                    name="requires_transcript"
+                    checked={form.requires_transcript}
+                    onChange={handleChange}
+                  />
+                  Transcript required
+                </label>
+                <label className="checkbox-inline">
+                  <input
+                    type="checkbox"
+                    name="requires_questions"
+                    checked={form.requires_questions}
+                    onChange={handleChange}
+                  />
+                  Extra questions required
+                </label>
+              </fieldset>
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="dashboard-button"
+                disabled={saving}
+              >
+                {editingId === null
+                  ? saving
+                    ? "Creating…"
+                    : "Submit Request"
+                  : saving
+                    ? "Updating…"
+                    : "Submit Update Request"}
+              </button>
+
+              {editingId !== null && (
+                <button
+                  type="button"
+                  className="dashboard-button secondary"
+                  onClick={resetForm}
+                  disabled={saving}
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+          </form>
         </div>
       </div>
     );
